@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
 
+const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
+
 const Upload = () => {
   const [files, setFiles] = useState([]);
   const [description, setDescription] = useState("");
@@ -20,7 +22,7 @@ const Upload = () => {
       formData.append("description", description);
 
       try {
-        const response = await axios.post("http://localhost:8080/upload", formData, {
+        const response = await axios.post(`${API_SERVER_URL}/upload`, formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "multipart/form-data",

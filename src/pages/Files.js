@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 
+const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
+
 const Files = () => {
   const [files, setFiles] = useState([]);
   const navigate = useNavigate();
@@ -10,7 +12,7 @@ const Files = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await axios.get("http://localhost:8080", {
+        const response = await axios.get(API_SERVER_URL, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setFiles(response.data);
@@ -26,7 +28,7 @@ const Files = () => {
 
   const handleDownload = (key) => {
     axios
-      .get(`http://localhost:8080/download?key=${key}`, {
+      .get(`${API_SERVER_URL}/download?key=${key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
       })
@@ -50,7 +52,7 @@ const Files = () => {
 
   const handleDelete = (key) => {
     axios
-      .delete(`http://localhost:8080/delete?key=${key}`, {
+      .delete(`${API_SERVER_URL}/delete?key=${key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       })
       .then(() => {

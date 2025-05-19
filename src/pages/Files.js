@@ -71,6 +71,7 @@ const Files = () => {
             <th>Name</th>
             <th>Description</th>
             <th>Actions</th>
+            <th>Email</th>
           </tr>
         </thead>
         <tbody>
@@ -78,6 +79,7 @@ const Files = () => {
             <tr key={file.key}>
               <td>{file.name}</td>
               <td>{file.description}</td>
+              <td>{file.uploaderEmail}</td>
               <td>
                 <button onClick={() => handleDownload(file.key)}>Download</button>
                 <button onClick={() => handleDelete(file.key)}>Delete</button>

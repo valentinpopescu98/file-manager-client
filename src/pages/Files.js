@@ -61,6 +61,23 @@ const Files = () => {
       .catch(console.error);
   };
 
+  const formatDate = (isoString) => {
+    const cleanDateStr = isoString.slice(0, 23);
+    const date = new Date(cleanDateStr);
+
+    if (isNaN(date)) {
+      return "NaN";
+    }
+
+    return date.toLocaleString("ro-RO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
   return (
     <div>
       <Navbar />
@@ -70,8 +87,9 @@ const Files = () => {
           <tr>
             <th>Name</th>
             <th>Description</th>
-            <th>Actions</th>
             <th>Email</th>
+            <th>Upload Time</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -80,6 +98,7 @@ const Files = () => {
               <td>{file.name}</td>
               <td>{file.description}</td>
               <td>{file.uploaderEmail}</td>
+              <td>{formatDate(file.uploadedAt)}</td>
               <td>
                 <button onClick={() => handleDownload(file.key)}>Download</button>
                 <button onClick={() => handleDelete(file.key)}>Delete</button>

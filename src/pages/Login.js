@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await axios.post(`${API_SERVER_URL}/login`, {
-        username,
+        email,
         password,
       });
       localStorage.setItem("token", response.data.token);
@@ -36,9 +36,9 @@ const Login = () => {
       <form onSubmit={handleLogin}>
         <input
           type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
         <input
           type="password"
@@ -50,8 +50,10 @@ const Login = () => {
       </form>
 
       <hr />
-
       <button onClick={handleGoogleLogin}>Login with Google</button>
+      <p>
+        Don't have an account yet? <Link to="/register">Register here</Link>.
+      </p>
     </div>
   );
 };

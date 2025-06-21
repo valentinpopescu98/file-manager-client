@@ -22,11 +22,11 @@ if ! docker network ls --format '{{.Name}}' | grep -w $NETWORK_NAME > /dev/null;
 fi
 
 # Start client on HTTP (no TLS config)
-echo "Starting client container..."
+echo "Starting client container on HTTP..."
 sudo docker-compose up -d --build client
 
 # Certbot request (only if cert doesn't exist)
-if [ ! -f "$CERT_PATH" ]; then
+if ! sudo test -f "$CERT_PATH"; then
   echo "No certificate found, requesting via Certbot..."
   docker-compose run --rm certbot
 else
@@ -37,7 +37,7 @@ fi
 CLIENT_CONTAINER=$(docker ps -qf "name=$CONTAINER_NAME")
 
 # Switch to HTTPS config if certs exist and container is running
-if [ -f "$CERT_PATH" ] && [ -n "$CLIENT_CONTAINER" ]; then
+if sudo test -f "$CERT_PATH" && [ -n "$CLIENT_CONTAINER" ]; then
   echo "Reloading Nginx in $CONTAINER_NAME with renewed cert..."
   docker exec $CLIENT_CONTAINER nginx -s reload
   echo "HTTPS is active on container $CONTAINER_NAME"

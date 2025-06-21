@@ -22,7 +22,7 @@ const Upload = () => {
       formData.append("description", description);
 
       try {
-        const response = await axios.post(`${API_SERVER_URL}/upload`, formData, {
+        const response = await axios.post(`${API_SERVER_URL}/api/upload`, formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "multipart/form-data",

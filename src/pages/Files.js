@@ -12,7 +12,7 @@ const Files = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await axios.get(API_SERVER_URL, {
+        const response = await axios.get(`${API_SERVER_URL}/api`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setFiles(response.data);
@@ -28,7 +28,7 @@ const Files = () => {
 
   const handleDownload = (s3Key) => {
     axios
-      .get(`${API_SERVER_URL}/download?s3Key=${s3Key}`, {
+      .get(`${API_SERVER_URL}/api/download?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
       })
@@ -52,7 +52,7 @@ const Files = () => {
 
   const handleDelete = (s3Key) => {
     axios
-      .delete(`${API_SERVER_URL}/delete?s3Key=${s3Key}`, {
+      .delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       })
       .then(() => {

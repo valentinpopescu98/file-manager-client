@@ -26,9 +26,9 @@ const Files = () => {
     fetchFiles();
   }, [navigate]);
 
-  const handleDownload = (key) => {
+  const handleDownload = (s3Key) => {
     axios
-      .get(`${API_SERVER_URL}/download?key=${key}`, {
+      .get(`${API_SERVER_URL}/download?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
       })
@@ -50,13 +50,13 @@ const Files = () => {
       .catch(console.error);
   };
 
-  const handleDelete = (key) => {
+  const handleDelete = (s3Key) => {
     axios
-      .delete(`${API_SERVER_URL}/delete?key=${key}`, {
+      .delete(`${API_SERVER_URL}/delete?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       })
       .then(() => {
-        setFiles((prev) => prev.filter((file) => file.key !== key));
+        setFiles((prev) => prev.filter((file) => file.s3Key !== s3Key));
       })
       .catch(console.error);
   };
@@ -94,14 +94,14 @@ const Files = () => {
         </thead>
         <tbody>
           {files.map((file) => (
-            <tr key={file.key}>
+            <tr key={file.s3Key}>
               <td>{file.name}</td>
               <td>{file.description}</td>
               <td>{file.uploaderEmail}</td>
               <td>{formatDate(file.uploadedAt)}</td>
               <td>
-                <button onClick={() => handleDownload(file.key)}>Download</button>
-                <button onClick={() => handleDelete(file.key)}>Delete</button>
+                <button onClick={() => handleDownload(file.s3Key)}>Download</button>
+                <button onClick={() => handleDelete(file.s3Key)}>Delete</button>
               </td>
             </tr>
           ))}

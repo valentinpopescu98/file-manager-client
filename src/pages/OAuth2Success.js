@@ -11,7 +11,7 @@ const OAuth2Success = () => {
       localStorage.setItem("token", token);
       navigate("/");
     }
-  }, []);
+  }, [navigate]);
 
   return <div>Logging in...</div>;
 };

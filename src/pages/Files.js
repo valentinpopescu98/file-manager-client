@@ -26,9 +26,8 @@ const Files = () => {
     fetchFiles();
   }, [navigate]);
 
-  const handleDownload = (s3Key) => {
-    axios
-      .get(`${API_SERVER_URL}/api/download?s3Key=${s3Key}`, {
+  const handleDownload = async (s3Key) => {
+    await axios.get(`${API_SERVER_URL}/api/download?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
       })
@@ -50,15 +49,14 @@ const Files = () => {
       .catch(console.error);
   };
 
-  const handleDelete = (s3Key) => {
-    axios
-      .delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-      .then(() => {
-        setFiles((prev) => prev.filter((file) => file.s3Key !== s3Key));
-      })
-      .catch(console.error);
+  const handleDelete = async (s3Key) => {
+    await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    })
+    .then(() => {
+      setFiles((prev) => prev.filter((file) => file.s3Key !== s3Key));
+    })
+    .catch(console.error);
   };
 
   const formatDate = (isoString) => {

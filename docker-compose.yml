@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  client:
+    build:
+      context: .
+    image: file-manager-client-app
+    container_name: file-manager-client-container
+    restart: always
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - file-manager-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    entrypoint: >
+      sh -c "[[ -f /etc/letsencrypt/live/filemanager.valentinpopescu.com/fullchain.pem ]] ||
+      certbot certonly --webroot -w /var/www/certbot
+      --email valentin@valentinpopescu.com --agree-tos --no-eff-email
+      -d filemanager.valentinpopescu.com && exit 0"
+    networks:
+      - file-manager-network
+
+networks:
+  file-manager-network:
+    external: true

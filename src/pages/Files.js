@@ -27,26 +27,35 @@ const Files = () => {
   }, [navigate]);
 
   const handleDownload = async (s3Key) => {
-    await axios.get(`${API_SERVER_URL}/api/download?s3Key=${s3Key}`, {
+    try {
+      const response = await axios.get(`${API_SERVER_URL}/api/download?s3Key=${encodeURIComponent(s3Key)}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
-      })
-      .then((response) => {
-        const blob = new Blob([response.data]);
-        const link = document.createElement("a");
+      });
 
-        const contentDisposition = response.headers["content-disposition"];
-        let fileName = contentDisposition
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = "downloaded_file";
+
+      if (contentDisposition && contentDisposition.includes("filename=")) {
+        fileName = contentDisposition
           .split("filename=")[1]
-          .replace(/"/g, "");
-        
-        link.href = window.URL.createObjectURL(blob);
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      })
-      .catch(console.error);
+          .split(";")[0]
+          .replace(/"/g, "")
+          .trim();
+      }
+
+      const blob = new Blob([response.data]);
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Download failed", error);
+      alert("Download failed! Try again...");
+    }
   };
 
   const handleDelete = async (s3Key) => {

@@ -21,9 +21,23 @@ const Files = () => {
   const [localSortBy, setLocalSortBy] = useState(null);
   const [localSortOrder, setLocalSortOrder] = useState("asc");
 
+  const [filterName, setFilterName] = useState("");
+  const [filterDescription, setFilterDescription] = useState("");
+  const [filterUploaderEmail, setFilterUploaderEmail] = useState("");
+  const [filterUploadedAt, setFilterUploadedAt] = useState("");
+
   useEffect(() => {
     const fetchPage = async () => {
-      const cacheKey = `${page}-${limit}-${sortBy}-${sortOrder}`;
+      const cacheKey = JSON.stringify({
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        filterName,
+        filterDescription,
+        filterUploaderEmail,
+        filterUploadedAt
+      });
 
       if (cache.current.has(cacheKey)) {
         const cached = cache.current.get(cacheKey);
@@ -35,7 +49,16 @@ const Files = () => {
       try {
         const response = await axios.get(`${API_SERVER_URL}/api`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: { page, limit, sortBy, sortOrder }
+          params: {
+            page,
+            limit,
+            sortBy,
+            sortOrder,
+            filterName,
+            filterDescription,
+            filterUploaderEmail,
+            filterUploadedAt,
+          }
         });
 
         const { files, hasNextPage } = response.data;
@@ -43,7 +66,7 @@ const Files = () => {
         setHasNextPage(hasNextPage);
 
         // add to cache
-        cache.current.set(page, { files, hasNextPage });
+        cache.current.set(cacheKey, { files, hasNextPage });
 
         // control cache size (FIFO)
         if (cache.current.size > MAX_CACHE_SIZE) {
@@ -58,7 +81,7 @@ const Files = () => {
     };
 
     fetchPage();
-  }, [navigate, page, limit, sortBy, sortOrder ]);
+  }, [navigate, page, limit, sortBy, sortOrder, filterName, filterDescription, filterUploaderEmail, filterUploadedAt ]);
 
   const handleDownload = async (s3Key) => {
     try {
@@ -135,6 +158,23 @@ const Files = () => {
     setPage(1);
   };
 
+  const handleFilterChange = (setter) => (e) => {
+    setter(e.target.value);
+
+    // reset to first page when filter changes
+    setPage(1);
+  }
+
+  const clearFilters = () => {
+    setFilterName("");
+    setFilterDescription("");
+    setFilterUploaderEmail("");
+    setFilterUploadedAt("");
+
+    // reset to first page after clearing filters
+    setPage(1);
+  }
+
   // sort for all files (in DB)
   const toggleSort = (column) => {
     if (sortBy === column) {
@@ -179,6 +219,32 @@ const Files = () => {
     <div>
       <Navbar />
       <h2>Files</h2>
+      
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginBottom: "10px" }}>
+        <button onClick={clearFilters}>
+          Clear Filters
+        </button>
+
+        <label>
+          Name filter:{" "}
+          <input type="text" value={filterName} onChange={handleFilterChange(setFilterName)} placeholder="file.pdf"/>
+        </label>
+
+        <label>
+          Description filter:{" "}
+          <input type="text" value={filterDescription} onChange={handleFilterChange(setFilterDescription)} placeholder="A PDF file..."/>
+        </label>
+
+        <label>
+          Email filter:{" "}
+          <input type="text" value={filterUploaderEmail} onChange={handleFilterChange(setFilterUploaderEmail)} placeholder="example@email.com"/>
+        </label>
+
+        <label>
+          Uploaded at filter:{" "}
+          <input type="text" value={filterUploadedAt} onChange={handleFilterChange(setFilterUploadedAt)} placeholder="ex: ^2025-06.*"/>
+        </label>
+      </div>
 
       <table>
         <thead>

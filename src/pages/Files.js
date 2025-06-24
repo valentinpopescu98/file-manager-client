@@ -14,15 +14,17 @@ const Files = () => {
   const [limit, setLimit] = useState(20);
 
   const cache = useRef(new Map());
-  const MAX_CACHE_SIZE = 10;
+  const MAX_CACHE_SIZE = 20;
 
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
 
   useEffect(() => {
     const fetchPage = async () => {
-      if (cache.current.has(page)) {
-        const cached = cache.current.get(page);
+      const cacheKey = `${page}-${limit}-${sortBy}-${sortOrder}`;
+      
+      if (cache.current.has(cacheKey)) {
+        const cached = cache.current.get(cacheKey);
         setFiles(cached.files);
         setHasNextPage(cached.hasNextPage);
         return;

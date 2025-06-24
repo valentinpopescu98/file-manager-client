@@ -16,6 +16,9 @@ const Files = () => {
   const cache = useRef(new Map());
   const MAX_CACHE_SIZE = 10;
 
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+
   useEffect(() => {
     const fetchPage = async () => {
       if (cache.current.has(page)) {
@@ -28,7 +31,7 @@ const Files = () => {
       try {
         const response = await axios.get(`${API_SERVER_URL}/api`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: { page, limit }
+          params: { page, limit, sortBy, sortOrder }
         });
 
         const { files, hasNextPage } = response.data;
@@ -51,7 +54,7 @@ const Files = () => {
     };
 
     fetchPage();
-  }, [navigate, page, limit]);
+  }, [navigate, page, limit, sortBy, sortOrder]);
 
   const handleDownload = async (s3Key) => {
     try {
@@ -120,6 +123,18 @@ const Files = () => {
     });
   }
 
+  const toggleSort = (column) => {
+    if (sortBy === column) {
+      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+
+    // reset to first page when sorting changes
+    setPage(1);
+  };
+
   return (
     <div>
       <Navbar />
@@ -128,10 +143,10 @@ const Files = () => {
       <table>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Email</th>
-            <th>Upload Time</th>
+            <th onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Name</th>
+            <th onClick={() => toggleSort("description")} style={{ cursor: "pointer" }}>Description</th>
+            <th onClick={() => toggleSort("uploaderEmail")} style={{ cursor: "pointer" }}>Email</th>
+            <th onClick={() => toggleSort("uploadedAt")} style={{ cursor: "pointer" }}>Upload Time</th>
             <th>Actions</th>
           </tr>
         </thead>

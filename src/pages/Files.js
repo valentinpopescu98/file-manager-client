@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
@@ -18,11 +18,13 @@ const Files = () => {
 
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [localSortBy, setLocalSortBy] = useState(null);
+  const [localSortOrder, setLocalSortOrder] = useState("asc");
 
   useEffect(() => {
     const fetchPage = async () => {
       const cacheKey = `${page}-${limit}-${sortBy}-${sortOrder}`;
-      
+
       if (cache.current.has(cacheKey)) {
         const cached = cache.current.get(cacheKey);
         setFiles(cached.files);
@@ -56,7 +58,7 @@ const Files = () => {
     };
 
     fetchPage();
-  }, [navigate, page, limit, sortBy, sortOrder]);
+  }, [navigate, page, limit, sortBy, sortOrder ]);
 
   const handleDownload = async (s3Key) => {
     try {
@@ -125,18 +127,6 @@ const Files = () => {
     });
   }
 
-  const toggleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("asc");
-    }
-
-    // reset to first page when sorting changes
-    setPage(1);
-  };
-
   const handleLimitChange = (e) => {
     const newLimit = parseInt(e.target.value);
     setLimit(newLimit);
@@ -144,6 +134,46 @@ const Files = () => {
     // reset to first page when limit changes
     setPage(1);
   };
+
+  // sort for all files (in DB)
+  const toggleSort = (column) => {
+    if (sortBy === column) {
+      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+    }
+
+    // reset to first page when sorting changes
+    setPage(1);
+  };
+
+  // sort for current page (by React state)
+  const toggleLocalSort = (column) => {
+    if (localSortBy === column) {
+      if (localSortOrder === "asc") {
+        // "asc" to "desc"
+        setLocalSortOrder("desc");
+      } else {
+        // "desc" to "none"
+        setLocalSortBy(null);
+        setLocalSortOrder("asc");
+      }
+    } else {
+      setLocalSortBy(column);
+      setLocalSortOrder("asc");
+    }
+  };
+
+  // apply sorting by current sort order
+  const locallySortedFiles = useMemo(() => {
+    if (!localSortBy) return files;
+
+    return [...files].sort((a, b) => {
+      const aVal = a[localSortBy]?.toLowerCase?.() || "";
+      const bVal = b[localSortBy]?.toLowerCase?.() || "";
+      return localSortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+  }, [files, localSortBy, localSortOrder]);
 
   return (
     <div>
@@ -153,15 +183,23 @@ const Files = () => {
       <table>
         <thead>
           <tr>
-            <th onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Name</th>
-            <th onClick={() => toggleSort("description")} style={{ cursor: "pointer" }}>Description</th>
-            <th onClick={() => toggleSort("uploaderEmail")} style={{ cursor: "pointer" }}>Email</th>
-            <th onClick={() => toggleSort("uploadedAt")} style={{ cursor: "pointer" }}>Upload Time</th>
+            <th onClick={() => toggleLocalSort("name")} style={{ cursor: "pointer" }}>
+              Name {localSortBy === "name" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
+            </th>
+            <th onClick={() => toggleLocalSort("description")} style={{ cursor: "pointer" }}>
+              Description {localSortBy === "description" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
+            </th>
+            <th onClick={() => toggleLocalSort("uploaderEmail")} style={{ cursor: "pointer" }}>
+              Email {localSortBy === "uploaderEmail" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
+            </th>
+            <th onClick={() => toggleLocalSort("uploadedAt")} style={{ cursor: "pointer" }}>
+              Upload Time {localSortBy === "uploadedAt" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {files.map((file) => (
+          {locallySortedFiles.map((file) => (
             <tr key={file.s3Key}>
               <td>{file.name}</td>
               <td>{file.description}</td>
@@ -176,24 +214,42 @@ const Files = () => {
         </tbody>
       </table>
 
-      <div style={{ marginTop: "20px", marginBottom: "10px" }}>
+      <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
         <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>
           Previous
         </button>
-        <span style={{ margin: "0 10px" }}>Page {page}</span>
+        <span>Page {page}</span>
         <button onClick={() => setPage(p => p + 1)} disabled={!hasNextPage}>
           Next
         </button>
-      </div>
 
-      <label style={{ marginLeft: "20px" }}>
-        Items per page:{" "}
-        <select value={limit} onChange={handleLimitChange}>
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
-      </label>
+        <label>
+          Sort by:{" "}
+          <select value={sortBy} onChange={(e) => toggleSort(e.target.value)}>
+            <option value="name">Name</option>
+            <option value="description">Description</option>
+            <option value="uploaderEmail">Email</option>
+            <option value="uploadedAt">Upload Time</option>
+          </select>
+        </label>
+
+        <label>
+          Order:{" "}
+          <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </label>
+
+        <label>
+          Items per page:{" "}
+          <select value={limit} onChange={handleLimitChange}>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+        </label>
+      </div>
     </div>
   );
 };

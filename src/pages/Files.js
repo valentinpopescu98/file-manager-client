@@ -24,7 +24,8 @@ const Files = () => {
   const [filterName, setFilterName] = useState("");
   const [filterDescription, setFilterDescription] = useState("");
   const [filterUploaderEmail, setFilterUploaderEmail] = useState("");
-  const [filterUploadedAt, setFilterUploadedAt] = useState("");
+  const [filterUploadedAtBefore, setFilterUploadedAtBefore] = useState("");
+  const [filterUploadedAtAfter, setFilterUploadedAtAfter] = useState("");
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -36,7 +37,8 @@ const Files = () => {
         filterName,
         filterDescription,
         filterUploaderEmail,
-        filterUploadedAt
+        filterUploadedAtBefore,
+        filterUploadedAtAfter
       });
 
       if (cache.current.has(cacheKey)) {
@@ -57,7 +59,8 @@ const Files = () => {
             filterName,
             filterDescription,
             filterUploaderEmail,
-            filterUploadedAt,
+            filterUploadedAtBefore,
+            filterUploadedAtAfter
           }
         });
 
@@ -81,7 +84,18 @@ const Files = () => {
     };
 
     fetchPage();
-  }, [navigate, page, limit, sortBy, sortOrder, filterName, filterDescription, filterUploaderEmail, filterUploadedAt ]);
+  }, [
+    navigate,
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    filterName,
+    filterDescription,
+    filterUploaderEmail,
+    filterUploadedAtBefore,
+    filterUploadedAtAfter
+  ]);
 
   const handleDownload = async (s3Key) => {
     try {
@@ -169,7 +183,8 @@ const Files = () => {
     setFilterName("");
     setFilterDescription("");
     setFilterUploaderEmail("");
-    setFilterUploadedAt("");
+    setFilterUploadedAtBefore("");
+    setFilterUploadedAtAfter("");
 
     // reset to first page after clearing filters
     setPage(1);
@@ -221,29 +236,22 @@ const Files = () => {
       <h2>Files</h2>
       
       <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginBottom: "10px" }}>
-        <button onClick={clearFilters}>
+        <button onClick={clearFilters} style={{ alignSelf: "flex-end", height: "33px" }}>
           Clear Filters
         </button>
 
-        <label>
-          Name filter:{" "}
-          <input type="text" value={filterName} onChange={handleFilterChange(setFilterName)} placeholder="file.pdf"/>
-        </label>
-
-        <label>
-          Description filter:{" "}
-          <input type="text" value={filterDescription} onChange={handleFilterChange(setFilterDescription)} placeholder="A PDF file..."/>
-        </label>
-
-        <label>
-          Email filter:{" "}
-          <input type="text" value={filterUploaderEmail} onChange={handleFilterChange(setFilterUploaderEmail)} placeholder="example@email.com"/>
-        </label>
-
-        <label>
-          Uploaded at filter:{" "}
-          <input type="text" value={filterUploadedAt} onChange={handleFilterChange(setFilterUploadedAt)} placeholder="ex: ^2025-06.*"/>
-        </label>
+        {[
+          { label: "Name", value: filterName, setter: setFilterName, type: "text", placeholder: "Search by name" },
+          { label: "Description", value: filterDescription, setter: setFilterDescription, type: "text", placeholder: "Search by description" },
+          { label: "Email", value: filterUploaderEmail, setter: setFilterUploaderEmail, type: "text", placeholder: "Search by email" },
+          { label: "Uploaded After", value: filterUploadedAtAfter, setter: setFilterUploadedAtAfter, type: "date" },
+          { label: "Uploaded Before", value: filterUploadedAtBefore, setter: setFilterUploadedAtBefore, type: "date" }
+        ].map(({ label, value, setter, type, placeholder }) => (
+          <div key={label} style={{ display: "flex", flexDirection: "column", minWidth: "150px" }}>
+            <label style={{ marginBottom: "4px", fontWeight: "bold", fontSize: "0.9em" }}>{label}</label>
+            <input type={type} value={value} onChange={handleFilterChange(setter)} placeholder={placeholder} style={{ padding: "6px 8px", fontSize: "0.9em", heigh: "28px" }}/>
+          </div>
+        ))}
       </div>
 
       <table>

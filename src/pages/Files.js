@@ -9,7 +9,7 @@ const Files = () => {
   const navigate = useNavigate();
 
   const [files, setFiles] = useState([]);
-  const [total, setTotal] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 20;
 
@@ -21,7 +21,7 @@ const Files = () => {
       if (cache.current.has(page)) {
         const cached = cache.current.get(page);
         setFiles(cached.files);
-        setTotal(cached.total);
+        setHasNextPage(cached.hasNextPage);
         return;
       }
 
@@ -31,14 +31,14 @@ const Files = () => {
           params: { page, limit }
         });
 
-        const { files, total } = response.data;
+        const { files, hasNextPage } = response.data;
         setFiles(files);
-        setTotal(total);
+        setHasNextPage(hasNextPage);
 
         // add to cache
-        cache.current.set(page, { files, total });
+        cache.current.set(page, { files, hasNextPage });
 
-        // contro cache size (FIFO)
+        // control cache size (FIFO)
         if (cache.current.size > MAX_CACHE_SIZE) {
           const oldestKey = cache.current.keys().next().value;
           cache.current.delete(oldestKey);
@@ -156,7 +156,7 @@ const Files = () => {
           Previous
         </button>
         <span style={{ margin: "0 10px" }}>Page {page}</span>
-        <button onClick={() => setPage(p => p + 1)} disabled={page * limit >= total}>
+        <button onClick={() => setPage(p => p + 1)} disabled={!hasNextPage}>
           Next
         </button>
       </div>

@@ -59,13 +59,21 @@ const Files = () => {
   };
 
   const handleDelete = async (s3Key) => {
-    await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    })
-    .then(() => {
-      setFiles((prev) => prev.filter((file) => file.s3Key !== s3Key));
-    })
-    .catch(console.error);
+    // remove from UI immediately
+    const removedFile = files.find(file => file.s3Key === s3Key);
+    setFiles(prev => prev.filter(file => file.s3Key !== s3Key));
+
+    // try to delete from the server
+    try {
+      await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+    } catch (error) {
+      // if failed, add the file back and notify
+      setFiles(prev => [removedFile, ...prev]);
+      console.error("Eroare la ștergere:", error);
+      alert("Deletion failed! Try again...");
+    }
   };
 
   const formatDate = (isoString) => {

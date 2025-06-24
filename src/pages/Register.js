@@ -5,12 +5,13 @@ import { useNavigate, Link } from "react-router-dom";
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Register = () => {
+  const navigate = useNavigate();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();

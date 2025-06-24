@@ -5,10 +5,11 @@ import { useNavigate, Link } from "react-router-dom";
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Login = () => {
+  const navigate = useNavigate();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();

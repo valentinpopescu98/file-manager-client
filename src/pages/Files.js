@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
@@ -6,22 +6,43 @@ import Navbar from "./Navbar";
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Files = () => {
-  const [files, setFiles] = useState([]);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [total, setTotal] = useState(0);
   const navigate = useNavigate();
 
+  const [files, setFiles] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  const cache = useRef(new Map());
+  const MAX_CACHE_SIZE = 10;
+
   useEffect(() => {
-    const fetchFiles = async () => {
+    const fetchPage = async () => {
+      if (cache.current.has(page)) {
+        const cached = cache.current.get(page);
+        setFiles(cached.files);
+        setTotal(cached.total);
+        return;
+      }
+
       try {
         const response = await axios.get(`${API_SERVER_URL}/api`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           params: { page, limit }
         });
 
-        setFiles(response.data.files);
-        setTotal(response.data.total);
+        const { files, total } = response.data;
+        setFiles(files);
+        setTotal(total);
+
+        // add to cache
+        cache.current.set(page, { files, total });
+
+        // contro cache size (FIFO)
+        if (cache.current.size > MAX_CACHE_SIZE) {
+          const oldestKey = cache.current.keys().next().value;
+          cache.current.delete(oldestKey);
+        }
       } catch (error) {
         if (error.response?.status === 401) {
           navigate("/login");
@@ -29,7 +50,7 @@ const Files = () => {
       }
     };
 
-    fetchFiles();
+    fetchPage();
   }, [navigate, page, limit]);
 
   const handleDownload = async (s3Key) => {

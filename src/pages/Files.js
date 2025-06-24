@@ -11,7 +11,7 @@ const Files = () => {
   const [files, setFiles] = useState([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const [limit, setLimit] = useState(20);
 
   const cache = useRef(new Map());
   const MAX_CACHE_SIZE = 10;
@@ -135,6 +135,14 @@ const Files = () => {
     setPage(1);
   };
 
+  const handleLimitChange = (e) => {
+    const newLimit = parseInt(e.target.value);
+    setLimit(newLimit);
+
+    // reset to first page when limit changes
+    setPage(1);
+  };
+
   return (
     <div>
       <Navbar />
@@ -175,6 +183,15 @@ const Files = () => {
           Next
         </button>
       </div>
+
+      <label style={{ marginLeft: "20px" }}>
+        Items per page:{" "}
+        <select value={limit} onChange={handleLimitChange}>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+      </label>
     </div>
   );
 };

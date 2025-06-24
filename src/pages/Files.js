@@ -7,6 +7,9 @@ const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Files = () => {
   const [files, setFiles] = useState([]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [total, setTotal] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,8 +17,11 @@ const Files = () => {
       try {
         const response = await axios.get(`${API_SERVER_URL}/api`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          params: { page, limit }
         });
-        setFiles(response.data);
+
+        setFiles(response.data.files);
+        setTotal(response.data.total);
       } catch (error) {
         if (error.response?.status === 401) {
           navigate("/login");
@@ -24,7 +30,7 @@ const Files = () => {
     };
 
     fetchFiles();
-  }, [navigate]);
+  }, [navigate, page, limit]);
 
   const handleDownload = async (s3Key) => {
     try {
@@ -97,6 +103,7 @@ const Files = () => {
     <div>
       <Navbar />
       <h2>Files</h2>
+
       <table>
         <thead>
           <tr>
@@ -122,6 +129,16 @@ const Files = () => {
           ))}
         </tbody>
       </table>
+
+      <div style={{ marginTop: "20px", marginBottom: "10px" }}>
+        <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>
+          Previous
+        </button>
+        <span style={{ margin: "0 10px" }}>Page {page}</span>
+        <button onClick={() => setPage(p => p + 1)} disabled={page * limit >= total}>
+          Next
+        </button>
+      </div>
     </div>
   );
 };

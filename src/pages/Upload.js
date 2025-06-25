@@ -74,6 +74,10 @@ const Upload = () => {
               item.name === fileName ? { ...item, status: "DONE" } : item
             )
           );
+
+          // mark as invalidated, to be handled by Files component
+          // files count updated -> remove current key from cache -> next fetchPage will call backend
+          localStorage.setItem("filesInvalidated", "true");
         } else if (status === "ERROR") {
           finished = true;
           setUploadStatuses(prev =>

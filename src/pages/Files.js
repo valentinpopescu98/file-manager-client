@@ -1,91 +1,53 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
+const CACHE_KEY = "pageCache";
+const CACHE_MAX_SIZE = 20;
 
 const Files = () => {
   const navigate = useNavigate();
+  const cache = useRef(new Map());
 
   const [files, setFiles] = useState([]);
-  const [hasNextPage, setHasNextPage] = useState(false);
+  const [filesCount, setFilesCount] = useState(null);
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
-
-  const cache = useRef(new Map());
-  const MAX_CACHE_SIZE = 20;
 
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
   const [localSortBy, setLocalSortBy] = useState(null);
   const [localSortOrder, setLocalSortOrder] = useState("asc");
 
-  const [filterName, setFilterName] = useState("");
-  const [filterDescription, setFilterDescription] = useState("");
-  const [filterUploaderEmail, setFilterUploaderEmail] = useState("");
-  const [filterUploadedAtBefore, setFilterUploadedAtBefore] = useState("");
-  const [filterUploadedAtAfter, setFilterUploadedAtAfter] = useState("");
+  const [draftFilterName, setDraftFilterName] = useState("");
+  const [draftFilterDescription, setDraftFilterDescription] = useState("");
+  const [draftFilterUploaderEmail, setDraftFilterUploaderEmail] = useState("");
+  const [draftFilterUploadedAtBefore, setDraftFilterUploadedAtBefore] = useState("");
+  const [draftFilterUploadedAtAfter, setDraftFilterUploadedAtAfter] = useState("");
 
-  useEffect(() => {
-    const fetchPage = async () => {
-      const cacheKey = JSON.stringify({
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        filterName,
-        filterDescription,
-        filterUploaderEmail,
-        filterUploadedAtBefore,
-        filterUploadedAtAfter
-      });
+  const filterName = useDebouncedValue(draftFilterName);
+  const filterDescription = useDebouncedValue(draftFilterDescription);
+  const filterUploaderEmail = useDebouncedValue(draftFilterUploaderEmail);
+  const filterUploadedAtBefore = useDebouncedValue(draftFilterUploadedAtBefore);
+  const filterUploadedAtAfter = useDebouncedValue(draftFilterUploadedAtAfter);
 
-      if (cache.current.has(cacheKey)) {
-        const cached = cache.current.get(cacheKey);
-        setFiles(cached.files);
-        setHasNextPage(cached.hasNextPage);
-        return;
-      }
-
-      try {
-        const response = await axios.get(`${API_SERVER_URL}/api`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          params: {
-            page,
-            limit,
-            sortBy,
-            sortOrder,
-            filterName,
-            filterDescription,
-            filterUploaderEmail,
-            filterUploadedAtBefore,
-            filterUploadedAtAfter
-          }
-        });
-
-        const { files, hasNextPage } = response.data;
-        setFiles(files);
-        setHasNextPage(hasNextPage);
-
-        // add to cache
-        cache.current.set(cacheKey, { files, hasNextPage });
-
-        // control cache size (FIFO)
-        if (cache.current.size > MAX_CACHE_SIZE) {
-          const oldestKey = cache.current.keys().next().value;
-          cache.current.delete(oldestKey);
-        }
-      } catch (error) {
-        if (error.response?.status === 401) {
-          navigate("/login");
-        }
-      }
-    };
-
-    fetchPage();
+  const getPageKey = useCallback(() => {
+    return JSON.stringify({
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      filterName,
+      filterDescription,
+      filterUploaderEmail,
+      filterUploadedAtBefore,
+      filterUploadedAtAfter
+    });
   }, [
-    navigate,
     page,
     limit,
     sortBy,
@@ -94,6 +56,141 @@ const Files = () => {
     filterDescription,
     filterUploaderEmail,
     filterUploadedAtBefore,
+    filterUploadedAtAfter
+  ]);
+
+  // File fetch logic
+  const fetchPage = useCallback(async () => {
+    const pageKey = getPageKey();
+
+    if (cache.current.has(pageKey)) {
+      const pageCache = cache.current.get(pageKey);
+      setFiles(pageCache.files);
+      setFilesCount(pageCache.filesCount);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API_SERVER_URL}/api`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        params: {
+          page,
+          limit,
+          sortBy,
+          sortOrder,
+          filterName,
+          filterDescription,
+          filterUploaderEmail,
+          filterUploadedAtBefore: filterUploadedAtBefore || undefined,
+          filterUploadedAtAfter: filterUploadedAtAfter || undefined
+        }
+      });
+
+      const { files, filesCount } = response.data;
+      setFiles(files);
+      setFilesCount(filesCount);
+
+      // add to cache
+      cache.current.set(pageKey, { files, filesCount });
+
+      // control cache size (FIFO)
+      if (cache.current.size > CACHE_MAX_SIZE) {
+        const oldestKey = cache.current.keys().next().value;
+        cache.current.delete(oldestKey);
+      }
+
+      // save cache to local storage
+      const serializedCache = JSON.stringify(Array.from(cache.current.entries()));
+      localStorage.setItem(CACHE_KEY, serializedCache);
+    } catch (error) {
+      console.error("Files fetch failed", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      }
+    }
+  }, [
+    navigate,
+    getPageKey,
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    filterName,
+    filterDescription,
+    filterUploaderEmail,
+    filterUploadedAtBefore,
+    filterUploadedAtAfter
+  ]);
+
+  // Load cache from localStorage on mount
+  useEffect(() => {
+    const json = localStorage.getItem(CACHE_KEY);
+    if (json) {
+      try {
+        const entries = JSON.parse(json);
+        cache.current = new Map(entries);
+      } catch {
+        cache.current = new Map();
+      }
+    }
+  }, []);
+
+  // Detect self-invalidations (same tab)
+  useEffect(() => {
+    const invalidated = localStorage.getItem("filesInvalidated");
+    if (invalidated === "true") {
+      console.log("Self-detected cache invalidation.");
+      cache.current.clear();
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem("filesInvalidated");
+      fetchPage();
+    }
+  }, [fetchPage]);
+
+  // Detect cross-tab invalidations (from another tab)
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === "filesInvalidated") {
+        console.log("Received cache invalidation signal.");
+
+        // Empty cache
+        cache.current.clear();
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem("filesInvalidated");
+
+        // Force refetch for current page
+        fetchPage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [fetchPage]);
+
+  // When removing all elements from page, move to previous page
+  useEffect(() => {
+    if (filesCount !== null) {
+      const maxPage = Math.max(1, Math.ceil(filesCount / limit));
+      if (page > maxPage) {
+        setPage(maxPage);
+      }
+    }
+  }, [filesCount, page, limit]);
+
+  // Handle fetch files
+  useEffect(() => {
+    fetchPage();
+  }, [
+    navigate,
+    fetchPage, 
+    page, 
+    limit, 
+    sortBy, 
+    sortOrder, 
+    filterName, 
+    filterDescription, 
+    filterUploaderEmail, 
+    filterUploadedAtBefore, 
     filterUploadedAtAfter
   ]);
 
@@ -139,10 +236,14 @@ const Files = () => {
       await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+
+      // mark as invalidated
+      // files count updated -> remove current key from cache -> next fetchPage will call backend
+      localStorage.setItem("filesInvalidated", "true");
     } catch (error) {
       // if failed, add the file back and notify
       setFiles(prev => [removedFile, ...prev]);
-      console.error("Eroare la ștergere:", error);
+      console.error("Deletion failed:", error);
       alert("Deletion failed! Try again...");
     }
   };
@@ -164,6 +265,36 @@ const Files = () => {
     });
   }
 
+  const getPageNumbers = (page, lastPage) => {
+    const delta = 2; // how many pages before and after current page
+    const pages = [];
+
+    // first page
+    pages.push(1);
+
+    // if there are more than 2 pages between page 1 and current page, write …
+    if (page - delta > 2) {
+      pages.push("left-ellipsis");
+    }
+
+    // pages around current page
+    for (let p = Math.max(2, page - delta); p <= Math.min(lastPage - 1, page + delta); p++) {
+      pages.push(p);
+    }
+
+    // if there are more than 2 pages between current page and last page, write …
+    if (page + delta < lastPage - 1) {
+      pages.push("right-ellipsis");
+    }
+
+    // last page (if bigger than 1)
+    if (lastPage > 1) {
+      pages.push(lastPage);
+    }
+
+    return pages;
+  }
+
   const handleLimitChange = (e) => {
     const newLimit = parseInt(e.target.value);
     setLimit(newLimit);
@@ -180,11 +311,11 @@ const Files = () => {
   }
 
   const clearFilters = () => {
-    setFilterName("");
-    setFilterDescription("");
-    setFilterUploaderEmail("");
-    setFilterUploadedAtBefore("");
-    setFilterUploadedAtAfter("");
+    setDraftFilterName("");
+    setDraftFilterDescription("");
+    setDraftFilterUploaderEmail("");
+    setDraftFilterUploadedAtBefore("");
+    setDraftFilterUploadedAtAfter("");
 
     // reset to first page after clearing filters
     setPage(1);
@@ -230,6 +361,9 @@ const Files = () => {
     });
   }, [files, localSortBy, localSortOrder]);
 
+  const lastPage = Math.ceil(filesCount / limit);
+  const pageNumbers = getPageNumbers(page, lastPage);
+
   return (
     <div>
       <Navbar />
@@ -241,11 +375,11 @@ const Files = () => {
         </button>
 
         {[
-          { label: "Name", value: filterName, setter: setFilterName, type: "text", placeholder: "Search by name" },
-          { label: "Description", value: filterDescription, setter: setFilterDescription, type: "text", placeholder: "Search by description" },
-          { label: "Email", value: filterUploaderEmail, setter: setFilterUploaderEmail, type: "text", placeholder: "Search by email" },
-          { label: "Uploaded After", value: filterUploadedAtAfter, setter: setFilterUploadedAtAfter, type: "date" },
-          { label: "Uploaded Before", value: filterUploadedAtBefore, setter: setFilterUploadedAtBefore, type: "date" }
+          { label: "Name", value: draftFilterName, setter: setDraftFilterName, type: "text", placeholder: "Search by name" },
+          { label: "Description", value: draftFilterDescription, setter: setDraftFilterDescription, type: "text", placeholder: "Search by description" },
+          { label: "Email", value: draftFilterUploaderEmail, setter: setDraftFilterUploaderEmail, type: "text", placeholder: "Search by email" },
+          { label: "Uploaded After", value: draftFilterUploadedAtAfter, setter: setDraftFilterUploadedAtAfter, type: "date" },
+          { label: "Uploaded Before", value: draftFilterUploadedAtBefore, setter: setDraftFilterUploadedAtBefore, type: "date" }
         ].map(({ label, value, setter, type, placeholder }) => (
           <div key={label} style={{ display: "flex", flexDirection: "column", minWidth: "150px" }}>
             <label style={{ marginBottom: "4px", fontWeight: "bold", fontSize: "0.9em" }}>{label}</label>
@@ -273,30 +407,30 @@ const Files = () => {
           </tr>
         </thead>
         <tbody>
-          {locallySortedFiles.map((file) => (
-            <tr key={file.s3Key}>
-              <td>{file.name}</td>
-              <td>{file.description}</td>
-              <td>{file.uploaderEmail}</td>
-              <td>{formatDate(file.uploadedAt)}</td>
-              <td>
-                <button onClick={() => handleDownload(file.s3Key)}>Download</button>
-                <button onClick={() => handleDelete(file.s3Key)}>Delete</button>
+          {locallySortedFiles.length === 0 ? (
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+                There are no files.
               </td>
             </tr>
-          ))}
+          ) : (
+            locallySortedFiles.map((file) => (
+              <tr key={file.s3Key}>
+                <td>{file.name}</td>
+                <td>{file.description}</td>
+                <td>{file.uploaderEmail}</td>
+                <td>{formatDate(file.uploadedAt)}</td>
+                <td>
+                  <button onClick={() => handleDownload(file.s3Key)}>Download</button>
+                  <button onClick={() => handleDelete(file.s3Key)}>Delete</button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
-        <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>
-          Previous
-        </button>
-        <span>Page {page}</span>
-        <button onClick={() => setPage(p => p + 1)} disabled={!hasNextPage}>
-          Next
-        </button>
-
         <label>
           Sort by:{" "}
           <select value={sortBy} onChange={(e) => toggleSort(e.target.value)}>
@@ -323,6 +457,30 @@ const Files = () => {
             <option value={50}>50</option>
           </select>
         </label>
+      </div>
+
+      <div style={{ marginTop: "20px", display: "flex", gap: "8px", justifyContent: "center", alignItems: "center" }}>
+        {pageNumbers.map((p, i) =>
+          p === "left-ellipsis" || p === "right-ellipsis" ? (
+            <span key={p + i} style={{ userSelect: "none" }}>...</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              disabled={p === page}
+              style={{
+                fontWeight: p === page ? "bold" : "normal",
+                cursor: p === page ? "default" : "pointer",
+                padding: "6px 10px",
+                borderRadius: "4px",
+                border: p === page ? "2px solid #007bff" : "1px solid #ccc",
+                backgroundColor: p === page ? "#e7f1ff" : "white",
+              }}
+            >
+              {p}
+            </button>
+          )
+        )}
       </div>
     </div>
   );

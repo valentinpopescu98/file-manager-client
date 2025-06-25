@@ -4,17 +4,18 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
+const PAGE_CACHE_KEY = "pageCache";
+const PAGE_CACHE_MAX_SIZE = 20;
 
 const Files = () => {
   const navigate = useNavigate();
+  const pageCache = useRef(new Map());
 
   const [files, setFiles] = useState([]);
-  const [hasNextPage, setHasNextPage] = useState(false);
+  const [filesCount, setFilesCount] = useState(null);
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
-
-  const cache = useRef(new Map());
-  const MAX_CACHE_SIZE = 20;
 
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
@@ -27,9 +28,22 @@ const Files = () => {
   const [filterUploadedAtBefore, setFilterUploadedAtBefore] = useState("");
   const [filterUploadedAtAfter, setFilterUploadedAtAfter] = useState("");
 
+  // Load cache from localStorage on mount
+  useEffect(() => {
+    const pageJson = localStorage.getItem(PAGE_CACHE_KEY);
+    if (pageJson) {
+      try {
+        const entries = JSON.parse(pageJson);
+        pageCache.current = new Map(entries);
+      } catch {
+        pageCache.current = new Map();
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchPage = async () => {
-      const cacheKey = JSON.stringify({
+      const pageKey = JSON.stringify({
         page,
         limit,
         sortBy,
@@ -41,10 +55,9 @@ const Files = () => {
         filterUploadedAtAfter
       });
 
-      if (cache.current.has(cacheKey)) {
-        const cached = cache.current.get(cacheKey);
-        setFiles(cached.files);
-        setHasNextPage(cached.hasNextPage);
+      if (pageCache.current.has(pageKey)) {
+        const cache = pageCache.current.get(pageKey);
+        setFiles(cache.files);
         return;
       }
 
@@ -64,19 +77,24 @@ const Files = () => {
           }
         });
 
-        const { files, hasNextPage } = response.data;
+        const { files, filesCount } = response.data;
         setFiles(files);
-        setHasNextPage(hasNextPage);
+        setFilesCount(filesCount);
 
         // add to cache
-        cache.current.set(cacheKey, { files, hasNextPage });
+        pageCache.current.set(pageKey, { files });
 
         // control cache size (FIFO)
-        if (cache.current.size > MAX_CACHE_SIZE) {
-          const oldestKey = cache.current.keys().next().value;
-          cache.current.delete(oldestKey);
+        if (pageCache.current.size > PAGE_CACHE_MAX_SIZE) {
+          const oldestKey = pageCache.current.keys().next().value;
+          pageCache.current.delete(oldestKey);
         }
+
+        // save cache to local storage
+        const pageCacheSerialized = JSON.stringify(Array.from(pageCache.current.entries()));
+        localStorage.setItem(PAGE_CACHE_KEY, pageCacheSerialized);
       } catch (error) {
+        console.error("Files fetch failed", error);
         if (error.response?.status === 401) {
           navigate("/login");
         }
@@ -139,10 +157,12 @@ const Files = () => {
       await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+
+      setFilesCount(prev => prev - 1);
     } catch (error) {
       // if failed, add the file back and notify
       setFiles(prev => [removedFile, ...prev]);
-      console.error("Eroare la ștergere:", error);
+      console.error("Deletion failed:", error);
       alert("Deletion failed! Try again...");
     }
   };
@@ -162,6 +182,36 @@ const Files = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  }
+
+  function getPageNumbers(page, lastPage) {
+    const delta = 2; // how many pages before and after current page
+    const pages = [];
+
+    // first page
+    pages.push(1);
+
+    // if there are more than 2 pages between page 1 and current page, write …
+    if (page - delta > 2) {
+      pages.push("left-ellipsis");
+    }
+
+    // pages around current page
+    for (let p = Math.max(2, page - delta); p <= Math.min(lastPage - 1, page + delta); p++) {
+      pages.push(p);
+    }
+
+    // if there are more than 2 pages between current page and last page, write …
+    if (page + delta < lastPage - 1) {
+      pages.push("right-ellipsis");
+    }
+
+    // last page (if bigger than 1)
+    if (lastPage > 1) {
+      pages.push(lastPage);
+    }
+
+    return pages;
   }
 
   const handleLimitChange = (e) => {
@@ -230,6 +280,9 @@ const Files = () => {
     });
   }, [files, localSortBy, localSortOrder]);
 
+  const lastPage = Math.ceil(filesCount / limit);
+  const pageNumbers = getPageNumbers(page, lastPage);
+
   return (
     <div>
       <Navbar />
@@ -289,14 +342,6 @@ const Files = () => {
       </table>
 
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
-        <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1}>
-          Previous
-        </button>
-        <span>Page {page}</span>
-        <button onClick={() => setPage(p => p + 1)} disabled={!hasNextPage}>
-          Next
-        </button>
-
         <label>
           Sort by:{" "}
           <select value={sortBy} onChange={(e) => toggleSort(e.target.value)}>
@@ -323,6 +368,30 @@ const Files = () => {
             <option value={50}>50</option>
           </select>
         </label>
+      </div>
+
+      <div style={{ marginTop: "20px", display: "flex", gap: "8px", justifyContent: "center", alignItems: "center" }}>
+        {pageNumbers.map((p, i) =>
+          p === "left-ellipsis" || p === "right-ellipsis" ? (
+            <span key={p + i} style={{ userSelect: "none" }}>...</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              disabled={p === page}
+              style={{
+                fontWeight: p === page ? "bold" : "normal",
+                cursor: p === page ? "default" : "pointer",
+                padding: "6px 10px",
+                borderRadius: "4px",
+                border: p === page ? "2px solid #007bff" : "1px solid #ccc",
+                backgroundColor: p === page ? "#e7f1ff" : "white",
+              }}
+            >
+              {p}
+            </button>
+          )
+        )}
       </div>
     </div>
   );

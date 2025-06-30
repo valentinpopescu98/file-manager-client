@@ -7,6 +7,8 @@ import useDebouncedValue from "../hooks/useDebouncedValue";
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
 const CACHE_MAX_SIZE = 20;
+const LAST_MUTATION_KEY = "lastMutationTimestamp";
+const CACHE_UPDATE_INTERVAL = 60 * 60 * 1000;
 
 const Files = () => {
   const navigate = useNavigate();
@@ -122,8 +124,9 @@ const Files = () => {
     filterUploadedAtAfter
   ]);
 
-  // Load cache from localStorage on mount
+  // Load up from local storage
   useEffect(() => {
+    // load cache
     const json = localStorage.getItem(CACHE_KEY);
     if (json) {
       try {
@@ -132,6 +135,11 @@ const Files = () => {
       } catch {
         cache.current = new Map();
       }
+    }
+
+    // load last mutation (UPLOAD/DELETE)
+    if (!localStorage.getItem(LAST_MUTATION_KEY)) {
+      localStorage.setItem(LAST_MUTATION_KEY, new Date().toISOString());
     }
   }, []);
 
@@ -193,6 +201,37 @@ const Files = () => {
     filterUploadedAtBefore, 
     filterUploadedAtAfter
   ]);
+
+  // Update cache
+  useEffect(() => {
+    const checkForInvalidation = async () => {
+      try {
+        const response = await axios.get(`${API_SERVER_URL}/api/log/files/actions/last-mutation`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+
+        const serverTimestamp = new Date(response.data).toISOString();
+        const localTimestamp = localStorage.getItem(LAST_MUTATION_KEY);
+
+        if (!localTimestamp || serverTimestamp > localTimestamp) {
+          console.log("Cache invalidated due to newer backend mutation");
+          localStorage.setItem(LAST_MUTATION_KEY, serverTimestamp);
+          cache.current.clear();
+          localStorage.removeItem(CACHE_KEY);
+          fetchPage();
+        }
+      } catch (err) {
+        console.error("Could not check for last mutation", err);
+      }
+    };
+
+    // initially
+    checkForInvalidation();
+
+    // then every hour
+    const interval = setInterval(checkForInvalidation, CACHE_UPDATE_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchPage]);
 
   const handleDownload = async (s3Key) => {
     try {

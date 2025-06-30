@@ -37,6 +37,8 @@ const Files = () => {
   const filterUploadedAtBefore = useDebouncedValue(draftFilterUploadedAtBefore);
   const filterUploadedAtAfter = useDebouncedValue(draftFilterUploadedAtAfter);
 
+  const [loading, setLoading] = useState(false);
+
   const getPageKey = useCallback(() => {
     return JSON.stringify({
       page,
@@ -61,20 +63,31 @@ const Files = () => {
     filterUploadedAtAfter
   ]);
 
+  const getAuthHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem("token")}`
+  });
+
+  const invalidateCache = () => {
+    cache.current.clear();
+    localStorage.removeItem(CACHE_KEY);
+  }
+
   // File fetch logic
   const fetchPage = useCallback(async () => {
+    setLoading(true);
     const pageKey = getPageKey();
-
+    
     if (cache.current.has(pageKey)) {
       const pageCache = cache.current.get(pageKey);
       setFiles(pageCache.files);
       setFilesCount(pageCache.filesCount);
+      setLoading(false);
       return;
     }
 
     try {
       const response = await axios.get(`${API_SERVER_URL}/api`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: getAuthHeaders(),
         params: {
           page,
           limit,
@@ -103,12 +116,18 @@ const Files = () => {
 
       // save cache to local storage
       const serializedCache = JSON.stringify(Array.from(cache.current.entries()));
-      localStorage.setItem(CACHE_KEY, serializedCache);
+      try {
+        localStorage.setItem(CACHE_KEY, serializedCache);
+      } catch (err) {
+        console.warn("Failed to write to localStorage", err);
+      }
     } catch (error) {
       console.error("Files fetch failed", error);
       if (error.response?.status === 401) {
         navigate("/login");
       }
+    } finally {
+      setLoading(false);
     }
   }, [
     navigate,
@@ -139,17 +158,20 @@ const Files = () => {
 
     // load last mutation (UPLOAD/DELETE)
     if (!localStorage.getItem(LAST_MUTATION_KEY)) {
-      localStorage.setItem(LAST_MUTATION_KEY, new Date().toISOString());
+      try {
+        localStorage.setItem(LAST_MUTATION_KEY, new Date().toISOString());
+      } catch (err) {
+        console.warn("Failed to write to localStorage", err);
+      }
     }
   }, []);
 
-  // Detect self-invalidations (same tab)
+  // Detect self-invalidations (same tab) -- trigger
   useEffect(() => {
     const invalidated = localStorage.getItem("filesInvalidated");
     if (invalidated === "true") {
       console.log("Self-detected cache invalidation.");
-      cache.current.clear();
-      localStorage.removeItem(CACHE_KEY);
+      invalidateCache();
       localStorage.removeItem("filesInvalidated");
       fetchPage();
     }
@@ -158,21 +180,54 @@ const Files = () => {
   // Detect cross-tab invalidations (from another tab)
   useEffect(() => {
     const handleStorage = (e) => {
-      if (e.key === "filesInvalidated") {
+      if (e.key === "filesInvalidated" && e.storageArea === localStorage && e.newValue === "true") {
         console.log("Received cache invalidation signal.");
 
         // Empty cache
-        cache.current.clear();
-        localStorage.removeItem(CACHE_KEY);
+        invalidateCache();
         localStorage.removeItem("filesInvalidated");
 
         // Force refetch for current page
-        fetchPage();
+        setTimeout(fetchPage, 0);
       }
     };
 
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
+  }, [fetchPage]);
+
+  // Update cache after invalidation (for situations when other clients make changes, but cache is stale)
+  useEffect(() => {
+    const checkForInvalidation = async () => {
+      try {
+        const response = await axios.get(`${API_SERVER_URL}/api/log/files/actions/last-mutation`, {
+          headers: getAuthHeaders()
+        });
+
+        const serverTimestamp = new Date(response.data).toISOString();
+        const localTimestamp = localStorage.getItem(LAST_MUTATION_KEY);
+
+        if (!localTimestamp || serverTimestamp > localTimestamp) {
+          console.log("Cache invalidated due to newer backend mutation");
+          try {
+            localStorage.setItem(LAST_MUTATION_KEY, serverTimestamp);
+          } catch (err) {
+            console.warn("Failed to write to localStorage", err);
+          }
+          invalidateCache();
+          setTimeout(fetchPage, 0);
+        }
+      } catch (err) {
+        console.error("Could not check for last mutation", err);
+      }
+    };
+
+    // initially
+    checkForInvalidation();
+
+    // then every hour
+    const interval = setInterval(checkForInvalidation, CACHE_UPDATE_INTERVAL);
+    return () => clearInterval(interval);
   }, [fetchPage]);
 
   // When removing all elements from page, move to previous page
@@ -202,41 +257,10 @@ const Files = () => {
     filterUploadedAtAfter
   ]);
 
-  // Update cache
-  useEffect(() => {
-    const checkForInvalidation = async () => {
-      try {
-        const response = await axios.get(`${API_SERVER_URL}/api/log/files/actions/last-mutation`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });
-
-        const serverTimestamp = new Date(response.data).toISOString();
-        const localTimestamp = localStorage.getItem(LAST_MUTATION_KEY);
-
-        if (!localTimestamp || serverTimestamp > localTimestamp) {
-          console.log("Cache invalidated due to newer backend mutation");
-          localStorage.setItem(LAST_MUTATION_KEY, serverTimestamp);
-          cache.current.clear();
-          localStorage.removeItem(CACHE_KEY);
-          fetchPage();
-        }
-      } catch (err) {
-        console.error("Could not check for last mutation", err);
-      }
-    };
-
-    // initially
-    checkForInvalidation();
-
-    // then every hour
-    const interval = setInterval(checkForInvalidation, CACHE_UPDATE_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchPage]);
-
   const handleDownload = async (s3Key) => {
     try {
       const response = await axios.get(`${API_SERVER_URL}/api/download?s3Key=${encodeURIComponent(s3Key)}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: getAuthHeaders(),
         responseType: "blob",
       });
 
@@ -269,19 +293,22 @@ const Files = () => {
     // remove from UI immediately
     const removedFile = files.find(file => file.s3Key === s3Key);
     setFiles(prev => prev.filter(file => file.s3Key !== s3Key));
+    setFilesCount(prev => prev - 1);
 
     // try to delete from the server
     try {
       await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: getAuthHeaders(),
       });
 
       // mark as invalidated
       // files count updated -> remove current key from cache -> next fetchPage will call backend
       localStorage.setItem("filesInvalidated", "true");
+      invalidateCache();
     } catch (error) {
       // if failed, add the file back and notify
       setFiles(prev => [removedFile, ...prev]);
+      setFilesCount(prev => prev + 1);
       console.error("Deletion failed:", error);
       alert("Deletion failed! Try again...");
     }
@@ -422,7 +449,7 @@ const Files = () => {
         ].map(({ label, value, setter, type, placeholder }) => (
           <div key={label} style={{ display: "flex", flexDirection: "column", minWidth: "150px" }}>
             <label style={{ marginBottom: "4px", fontWeight: "bold", fontSize: "0.9em" }}>{label}</label>
-            <input type={type} value={value} onChange={handleFilterChange(setter)} placeholder={placeholder} style={{ padding: "6px 8px", fontSize: "0.9em", heigh: "28px" }}/>
+            <input type={type} value={value} onChange={handleFilterChange(setter)} placeholder={placeholder} style={{ padding: "6px 8px", fontSize: "0.9em", height: "28px" }}/>
           </div>
         ))}
       </div>
@@ -446,7 +473,13 @@ const Files = () => {
           </tr>
         </thead>
         <tbody>
-          {locallySortedFiles.length === 0 ? (
+          {loading ? (
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+                Loading...
+              </td>
+            </tr>
+          ) : locallySortedFiles.length === 0 ? (
             <tr>
               <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
                 There are no files.

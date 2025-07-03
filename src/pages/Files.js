@@ -47,8 +47,8 @@ const Files = () => {
 
   const { globalToggleSort } = useFilesGlobalSorting(
         globalSortBy,
-        setGlobalSortBy,
         globalSortOrder,
+        setGlobalSortBy,
         setGlobalSortOrder,
         () => setPage(1)
     );

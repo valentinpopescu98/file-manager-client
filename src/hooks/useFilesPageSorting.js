@@ -1,33 +1,39 @@
 import { useMemo } from "react";
 
-export function useFilesPageSorting(pageSortBy, pageSortOrder, setPageSortBy, setPageSortOrder, files) {
+export function useFilesPageSorting(
+    sortBy,
+    sortOrder,
+    setSortBy,
+    setSortOrder,
+    files
+) {
     // sort for current page (by React state)
     const pageToggleSort = (column) => {
-        if (pageSortBy === column) {
-            if (pageSortOrder === "asc") {
+        if (sortBy === column) {
+            if (sortOrder === "asc") {
                 // "asc" to "desc"
-                setPageSortOrder("desc");
+                setSortOrder("desc");
             } else {
                 // "desc" to "none"
-                setPageSortBy(null);
-                setPageSortOrder("asc");
+                setSortBy(null);
+                setSortOrder("asc");
             }
         } else {
-            setPageSortBy(column);
-            setPageSortOrder("asc");
+            setSortBy(column);
+            setSortOrder("asc");
         }
     };
 
     // apply sorting by current sort order
     const pageSortedFiles = useMemo(() => {
-        if (!pageSortBy) return files;
+        if (!sortBy) return files;
 
         return [...files].sort((a, b) => {
-            const aVal = a[pageSortBy]?.toLowerCase?.() || "";
-            const bVal = b[pageSortBy]?.toLowerCase?.() || "";
-            return pageSortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            const aVal = a[sortBy]?.toLowerCase?.() || "";
+            const bVal = b[sortBy]?.toLowerCase?.() || "";
+            return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         });
-    }, [files, pageSortBy, pageSortOrder]);
+    }, [files, sortBy, sortOrder]);
 
     return {
         pageToggleSort,

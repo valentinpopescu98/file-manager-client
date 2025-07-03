@@ -1,14 +1,14 @@
 export function useFilesGlobalSorting(
     sortBy,
-    setSortBy,
     sortOrder,
+    setSortBy,
     setSortOrder,
     goToFirstPage
 ) {
     // sort for all files (in DB)
     const globalToggleSort = (column) => {
         if (sortBy === column) {
-            setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         } else {
             setSortBy(column);
         }

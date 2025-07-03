@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useDebouncedValue from "../hooks/useDebouncedValue";
+import { isoToDate } from "../utils/date";
+import useFilesFilter from "../hooks/useFilesFilter";
 import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
 import useFilesPageSorting from "../hooks/useFilesPageSorting";
 import usePageLimit from "../hooks/usePageLimit";
@@ -9,10 +11,9 @@ import usePagination from "../hooks/usePagination";
 import Navbar from "../components/Navbar";
 import GlobalSortingControls from "../components/GlobalSortingControls";
 import FileMetadata from "../components/FileMetadata";
+import FilteringControls from "../components/FilteringControls";
 import PageLimit from "../components/PageLimit";
 import PaginationControls from "../components/PaginationControls";
-import useFilesFilter from "../hooks/useFilesFilter";
-import FilteringControls from "../components/FilteringControls";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
@@ -58,14 +59,6 @@ const Files = () => {
     }, () => setPage(1)
   );
 
-  const { globalToggleSort } = useFilesGlobalSorting(
-    globalSortBy,
-    globalSortOrder,
-    setGlobalSortBy,
-    setGlobalSortOrder,
-    () => setPage(1)
-  );
-
   const { pageToggleSort, pageSortedFiles } = useFilesPageSorting(
     pageSortBy,
     pageSortOrder,
@@ -74,15 +67,23 @@ const Files = () => {
     files
   );
 
-  const { pageNumbers } = usePagination(
-    page,
-    filesCount,
-    limit
+  const { globalToggleSort } = useFilesGlobalSorting(
+    globalSortBy,
+    globalSortOrder,
+    setGlobalSortBy,
+    setGlobalSortOrder,
+    () => setPage(1)
   );
 
   const { handleLimitChange } = usePageLimit(
     setLimit,
     () => setPage(1)
+  );
+
+  const { pageNumbers } = usePagination(
+    page,
+    filesCount,
+    limit
   );
 
   const getPageKey = useCallback(() => {
@@ -360,23 +361,6 @@ const Files = () => {
     }
   };
 
-  const formatDate = (isoString) => {
-    const cleanDateStr = isoString.slice(0, 23);
-    const date = new Date(cleanDateStr);
-
-    if (isNaN(date)) {
-      return "NaN";
-    }
-
-    return date.toLocaleString("ro-RO", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
   return (
     <div>
       <Navbar />
@@ -387,7 +371,7 @@ const Files = () => {
         handleFilterChange={handleFilterChange} clearFilters={clearFilters} />
 
       <FileMetadata pageSortBy={pageSortBy} pageSortOrder={pageSortOrder} pageToggleSort={pageToggleSort}
-        files={pageSortedFiles} loading={loading} formatDate={formatDate} handleDownload={handleDownload} handleDelete={handleDelete} />
+        files={pageSortedFiles} loading={loading} isoToDate={isoToDate} handleDownload={handleDownload} handleDelete={handleDelete} />
 
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
         <GlobalSortingControls sortBy={globalSortBy} sortOrder={globalSortOrder} toggleSort={globalToggleSort} setSortOrder={setGlobalSortOrder} />

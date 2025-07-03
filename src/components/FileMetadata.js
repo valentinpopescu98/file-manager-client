@@ -6,7 +6,7 @@ const FileMetadata = ({
   pageToggleSort,
   files,
   loading,
-  formatDate,
+  isoToDate,
   handleDownload,
   handleDelete,
 }) => {
@@ -32,7 +32,7 @@ const FileMetadata = ({
                 <td>{file.name}</td>
                 <td>{file.description}</td>
                 <td>{file.uploaderEmail}</td>
-                <td>{formatDate(file.uploadedAt)}</td>
+                <td>{isoToDate(file.uploadedAt)}</td>
                 <td>
                   <button onClick={() => handleDownload(file.s3Key)}>Download</button>
                   <button onClick={() => handleDelete(file.s3Key)}>Delete</button>

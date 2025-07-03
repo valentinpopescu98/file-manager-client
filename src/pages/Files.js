@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Navbar from "./Navbar";
+import Navbar from "../components/Navbar";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;

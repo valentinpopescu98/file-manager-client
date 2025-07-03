@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import axios from "axios";
-import Navbar from "./Navbar";
+import Navbar from "../components/Navbar";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 

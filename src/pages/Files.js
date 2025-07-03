@@ -8,7 +8,7 @@ import usePageLimit from "../hooks/usePageLimit";
 import usePagination from "../hooks/usePagination";
 import Navbar from "../components/Navbar";
 import GlobalSortingControls from "../components/GlobalSortingControls";
-import PageSortingControls from "../components/PageSortingControls";
+import FileMetadata from "../components/FileMetadata";
 import PageLimit from "../components/PageLimit";
 import PaginationControls from "../components/PaginationControls";
 
@@ -408,7 +408,7 @@ const Files = () => {
         ))}
       </div>
 
-      <PageSortingControls sortBy={pageSortBy} sortOrder={pageSortOrder} toggleSort={pageToggleSort}
+      <FileMetadata pageSortBy={pageSortBy} pageSortOrder={pageSortOrder} pageToggleSort={pageToggleSort}
        files={pageSortedFiles} loading={loading} formatDate={formatDate} handleDownload={handleDownload} handleDelete={handleDelete} />
 
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>

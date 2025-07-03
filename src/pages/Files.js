@@ -11,6 +11,8 @@ import GlobalSortingControls from "../components/GlobalSortingControls";
 import FileMetadata from "../components/FileMetadata";
 import PageLimit from "../components/PageLimit";
 import PaginationControls from "../components/PaginationControls";
+import useFilesFilter from "../hooks/useFilesFilter";
+import FilteringControls from "../components/FilteringControls";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
@@ -46,14 +48,23 @@ const Files = () => {
   const filterUploadedAtAfter = useDebouncedValue(draftFilterUploadedAtAfter);
 
   const [loading, setLoading] = useState(false);
+  
+  const { handleFilterChange, clearFilters } = useFilesFilter({
+      setDraftFilterName,
+      setDraftFilterDescription,
+      setDraftFilterUploaderEmail,
+      setDraftFilterUploadedAtBefore,
+      setDraftFilterUploadedAtAfter
+    }, () => setPage(1)
+  );
 
   const { globalToggleSort } = useFilesGlobalSorting(
-        globalSortBy,
-        globalSortOrder,
-        setGlobalSortBy,
-        setGlobalSortOrder,
-        () => setPage(1)
-    );
+    globalSortBy,
+    globalSortOrder,
+    setGlobalSortBy,
+    setGlobalSortOrder,
+    () => setPage(1)
+  );
 
   const { pageToggleSort, pageSortedFiles } = useFilesPageSorting(
     pageSortBy,
@@ -366,50 +377,17 @@ const Files = () => {
     });
   }
 
-  const handleFilterChange = (setter) => (e) => {
-    setter(e.target.value);
-
-    // reset to first page when filter changes
-    setPage(1);
-  }
-
-  const clearFilters = () => {
-    setDraftFilterName("");
-    setDraftFilterDescription("");
-    setDraftFilterUploaderEmail("");
-    setDraftFilterUploadedAtBefore("");
-    setDraftFilterUploadedAtAfter("");
-
-    // reset to first page after clearing filters
-    setPage(1);
-  }
-
   return (
     <div>
       <Navbar />
       <h2>Files</h2>
       
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginBottom: "10px" }}>
-        <button onClick={clearFilters} style={{ alignSelf: "flex-end", height: "33px" }}>
-          Clear Filters
-        </button>
-
-        {[
-          { label: "Name", value: draftFilterName, setter: setDraftFilterName, type: "text", placeholder: "Search by name" },
-          { label: "Description", value: draftFilterDescription, setter: setDraftFilterDescription, type: "text", placeholder: "Search by description" },
-          { label: "Email", value: draftFilterUploaderEmail, setter: setDraftFilterUploaderEmail, type: "text", placeholder: "Search by email" },
-          { label: "Uploaded After", value: draftFilterUploadedAtAfter, setter: setDraftFilterUploadedAtAfter, type: "date" },
-          { label: "Uploaded Before", value: draftFilterUploadedAtBefore, setter: setDraftFilterUploadedAtBefore, type: "date" }
-        ].map(({ label, value, setter, type, placeholder }) => (
-          <div key={label} style={{ display: "flex", flexDirection: "column", minWidth: "150px" }}>
-            <label style={{ marginBottom: "4px", fontWeight: "bold", fontSize: "0.9em" }}>{label}</label>
-            <input type={type} value={value} onChange={handleFilterChange(setter)} placeholder={placeholder} style={{ padding: "6px 8px", fontSize: "0.9em", height: "28px" }}/>
-          </div>
-        ))}
-      </div>
+      <FilteringControls filters={{draftFilterName, draftFilterDescription, draftFilterUploaderEmail, draftFilterUploadedAtBefore, draftFilterUploadedAtAfter}}
+        setters={{setDraftFilterName, setDraftFilterDescription, setDraftFilterUploaderEmail, setDraftFilterUploadedAtBefore, setDraftFilterUploadedAtAfter}}
+        handleFilterChange={handleFilterChange} clearFilters={clearFilters} />
 
       <FileMetadata pageSortBy={pageSortBy} pageSortOrder={pageSortOrder} pageToggleSort={pageToggleSort}
-       files={pageSortedFiles} loading={loading} formatDate={formatDate} handleDownload={handleDownload} handleDelete={handleDelete} />
+        files={pageSortedFiles} loading={loading} formatDate={formatDate} handleDownload={handleDownload} handleDelete={handleDelete} />
 
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
         <GlobalSortingControls sortBy={globalSortBy} sortOrder={globalSortOrder} toggleSort={globalToggleSort} setSortOrder={setGlobalSortOrder} />

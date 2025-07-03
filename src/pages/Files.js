@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
 import useDebouncedValue from "../hooks/useDebouncedValue";
+import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
+import useFilesPageSorting from "../hooks/useFilesPageSorting";
+import Navbar from "../components/Navbar";
+import GlobalSortingControls from "../components/GlobalSortingControls";
+import PageSortingControls from "../components/PageSortingControls";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
@@ -20,10 +24,10 @@ const Files = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
 
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [localSortBy, setLocalSortBy] = useState(null);
-  const [localSortOrder, setLocalSortOrder] = useState("asc");
+  const [globalSortBy, setGlobalSortBy] = useState("name");
+  const [globalSortOrder, setGlobalSortOrder] = useState("asc");
+  const [pageSortBy, setPageSortBy] = useState(null);
+  const [pageSortOrder, setPageSortOrder] = useState("asc");
 
   const [draftFilterName, setDraftFilterName] = useState("");
   const [draftFilterDescription, setDraftFilterDescription] = useState("");
@@ -39,12 +43,28 @@ const Files = () => {
 
   const [loading, setLoading] = useState(false);
 
+  const { globalToggleSort } = useFilesGlobalSorting(
+        globalSortBy,
+        setGlobalSortBy,
+        globalSortOrder,
+        setGlobalSortOrder,
+        () => setPage(1)
+    );
+
+  const { pageToggleSort, pageSortedFiles } = useFilesPageSorting(
+    pageSortBy,
+    pageSortOrder,
+    setPageSortBy,
+    setPageSortOrder,
+    files
+  );
+
   const getPageKey = useCallback(() => {
     return JSON.stringify({
       page,
       limit,
-      sortBy,
-      sortOrder,
+      globalSortBy,
+      globalSortOrder,
       filterName,
       filterDescription,
       filterUploaderEmail,
@@ -54,8 +74,8 @@ const Files = () => {
   }, [
     page,
     limit,
-    sortBy,
-    sortOrder,
+    globalSortBy,
+    globalSortOrder,
     filterName,
     filterDescription,
     filterUploaderEmail,
@@ -91,8 +111,8 @@ const Files = () => {
         params: {
           page,
           limit,
-          sortBy,
-          sortOrder,
+          globalSortBy,
+          globalSortOrder,
           filterName,
           filterDescription,
           filterUploaderEmail,
@@ -134,8 +154,8 @@ const Files = () => {
     getPageKey,
     page,
     limit,
-    sortBy,
-    sortOrder,
+    globalSortBy,
+    globalSortOrder,
     filterName,
     filterDescription,
     filterUploaderEmail,
@@ -248,8 +268,8 @@ const Files = () => {
     fetchPage, 
     page, 
     limit, 
-    sortBy, 
-    sortOrder, 
+    globalSortBy, 
+    globalSortOrder, 
     filterName, 
     filterDescription, 
     filterUploaderEmail, 
@@ -387,46 +407,6 @@ const Files = () => {
     setPage(1);
   }
 
-  // sort for all files (in DB)
-  const toggleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-    }
-
-    // reset to first page when sorting changes
-    setPage(1);
-  };
-
-  // sort for current page (by React state)
-  const toggleLocalSort = (column) => {
-    if (localSortBy === column) {
-      if (localSortOrder === "asc") {
-        // "asc" to "desc"
-        setLocalSortOrder("desc");
-      } else {
-        // "desc" to "none"
-        setLocalSortBy(null);
-        setLocalSortOrder("asc");
-      }
-    } else {
-      setLocalSortBy(column);
-      setLocalSortOrder("asc");
-    }
-  };
-
-  // apply sorting by current sort order
-  const locallySortedFiles = useMemo(() => {
-    if (!localSortBy) return files;
-
-    return [...files].sort((a, b) => {
-      const aVal = a[localSortBy]?.toLowerCase?.() || "";
-      const bVal = b[localSortBy]?.toLowerCase?.() || "";
-      return localSortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-    });
-  }, [files, localSortBy, localSortOrder]);
-
   const lastPage = Math.ceil(filesCount / limit);
   const pageNumbers = getPageNumbers(page, lastPage);
 
@@ -454,72 +434,11 @@ const Files = () => {
         ))}
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th onClick={() => toggleLocalSort("name")} style={{ cursor: "pointer" }}>
-              Name {localSortBy === "name" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
-            </th>
-            <th onClick={() => toggleLocalSort("description")} style={{ cursor: "pointer" }}>
-              Description {localSortBy === "description" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
-            </th>
-            <th onClick={() => toggleLocalSort("uploaderEmail")} style={{ cursor: "pointer" }}>
-              Email {localSortBy === "uploaderEmail" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
-            </th>
-            <th onClick={() => toggleLocalSort("uploadedAt")} style={{ cursor: "pointer" }}>
-              Upload Time {localSortBy === "uploadedAt" && (localSortOrder === "asc" ? "↑" : localSortOrder === "desc" ? "↓" : "")}
-            </th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                Loading...
-              </td>
-            </tr>
-          ) : locallySortedFiles.length === 0 ? (
-            <tr>
-              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                There are no files.
-              </td>
-            </tr>
-          ) : (
-            locallySortedFiles.map((file) => (
-              <tr key={file.s3Key}>
-                <td>{file.name}</td>
-                <td>{file.description}</td>
-                <td>{file.uploaderEmail}</td>
-                <td>{formatDate(file.uploadedAt)}</td>
-                <td>
-                  <button onClick={() => handleDownload(file.s3Key)}>Download</button>
-                  <button onClick={() => handleDelete(file.s3Key)}>Delete</button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <PageSortingControls sortBy={pageSortBy} sortOrder={pageSortOrder} toggleSort={pageToggleSort}
+       files={pageSortedFiles} loading={loading} formatDate={formatDate} handleDownload={handleDownload} handleDelete={handleDelete} />
 
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
-        <label>
-          Sort by:{" "}
-          <select value={sortBy} onChange={(e) => toggleSort(e.target.value)}>
-            <option value="name">Name</option>
-            <option value="description">Description</option>
-            <option value="uploaderEmail">Email</option>
-            <option value="uploadedAt">Upload Time</option>
-          </select>
-        </label>
-
-        <label>
-          Order:{" "}
-          <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
-        </label>
+        <GlobalSortingControls sortBy={globalSortBy} sortOrder={globalSortOrder} toggleSort={globalToggleSort} setSortOrder={setGlobalSortOrder} />
 
         <label>
           Items per page:{" "}

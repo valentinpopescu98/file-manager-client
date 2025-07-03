@@ -4,10 +4,12 @@ import { useNavigate } from "react-router-dom";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
 import useFilesPageSorting from "../hooks/useFilesPageSorting";
+import usePageLimit from "../hooks/usePageLimit";
 import usePagination from "../hooks/usePagination";
 import Navbar from "../components/Navbar";
 import GlobalSortingControls from "../components/GlobalSortingControls";
 import PageSortingControls from "../components/PageSortingControls";
+import PageLimit from "../components/PageLimit";
 import PaginationControls from "../components/PaginationControls";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
@@ -65,6 +67,11 @@ const Files = () => {
     page,
     filesCount,
     limit
+  );
+
+  const { handleLimitChange } = usePageLimit(
+    setLimit,
+    () => setPage(1)
   );
 
   const getPageKey = useCallback(() => {
@@ -359,14 +366,6 @@ const Files = () => {
     });
   }
 
-  const handleLimitChange = (e) => {
-    const newLimit = parseInt(e.target.value);
-    setLimit(newLimit);
-
-    // reset to first page when limit changes
-    setPage(1);
-  };
-
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
 
@@ -415,14 +414,7 @@ const Files = () => {
       <div style={{display: "flex", alignItems: "center", gap: "20px", marginTop: "20px", marginBottom: "10px"}}>
         <GlobalSortingControls sortBy={globalSortBy} sortOrder={globalSortOrder} toggleSort={globalToggleSort} setSortOrder={setGlobalSortOrder} />
 
-        <label>
-          Items per page:{" "}
-          <select value={limit} onChange={handleLimitChange}>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-        </label>
+        <PageLimit limit={limit} handleLimitChange={handleLimitChange} />
       </div>
 
       <PaginationControls page={page} pageNumbers={pageNumbers} setPage={setPage} />

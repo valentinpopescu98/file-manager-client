@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
 import useFilesPageSorting from "../hooks/useFilesPageSorting";
+import usePagination from "../hooks/usePagination";
 import Navbar from "../components/Navbar";
 import GlobalSortingControls from "../components/GlobalSortingControls";
 import PageSortingControls from "../components/PageSortingControls";
+import PaginationControls from "../components/PaginationControls";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
@@ -57,6 +59,12 @@ const Files = () => {
     setPageSortBy,
     setPageSortOrder,
     files
+  );
+
+  const { pageNumbers } = usePagination(
+    page,
+    filesCount,
+    limit
   );
 
   const getPageKey = useCallback(() => {
@@ -351,36 +359,6 @@ const Files = () => {
     });
   }
 
-  const getPageNumbers = (page, lastPage) => {
-    const delta = 2; // how many pages before and after current page
-    const pages = [];
-
-    // first page
-    pages.push(1);
-
-    // if there are more than 2 pages between page 1 and current page, write …
-    if (page - delta > 2) {
-      pages.push("left-ellipsis");
-    }
-
-    // pages around current page
-    for (let p = Math.max(2, page - delta); p <= Math.min(lastPage - 1, page + delta); p++) {
-      pages.push(p);
-    }
-
-    // if there are more than 2 pages between current page and last page, write …
-    if (page + delta < lastPage - 1) {
-      pages.push("right-ellipsis");
-    }
-
-    // last page (if bigger than 1)
-    if (lastPage > 1) {
-      pages.push(lastPage);
-    }
-
-    return pages;
-  }
-
   const handleLimitChange = (e) => {
     const newLimit = parseInt(e.target.value);
     setLimit(newLimit);
@@ -406,9 +384,6 @@ const Files = () => {
     // reset to first page after clearing filters
     setPage(1);
   }
-
-  const lastPage = Math.ceil(filesCount / limit);
-  const pageNumbers = getPageNumbers(page, lastPage);
 
   return (
     <div>
@@ -450,29 +425,7 @@ const Files = () => {
         </label>
       </div>
 
-      <div style={{ marginTop: "20px", display: "flex", gap: "8px", justifyContent: "center", alignItems: "center" }}>
-        {pageNumbers.map((p, i) =>
-          p === "left-ellipsis" || p === "right-ellipsis" ? (
-            <span key={p + i} style={{ userSelect: "none" }}>...</span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              disabled={p === page}
-              style={{
-                fontWeight: p === page ? "bold" : "normal",
-                cursor: p === page ? "default" : "pointer",
-                padding: "6px 10px",
-                borderRadius: "4px",
-                border: p === page ? "2px solid #007bff" : "1px solid #ccc",
-                backgroundColor: p === page ? "#e7f1ff" : "white",
-              }}
-            >
-              {p}
-            </button>
-          )
-        )}
-      </div>
+      <PaginationControls page={page} pageNumbers={pageNumbers} setPage={setPage} />
     </div>
   );
 };

@@ -10,6 +10,7 @@ How to run:
 2. `git clone git@github.com:valentinpopescu98/file-manager-client.git ~/file-manager-client/`
 3. Change IP at _~/file-manager-client/.env_ to EC2 instance's IP (if client and server are hosted on different instances, **provide server instance IP**)
 4. `~/file-manager-client/build-and-run.sh`
+5. npm install
 
 ---
 

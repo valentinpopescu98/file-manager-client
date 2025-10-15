@@ -14,6 +14,8 @@ const Navbar = () => {
       <button
         onClick={() => {
           localStorage.removeItem("token");
+          localStorage.removeItem("pageCache");
+          localStorage.removeItem("lastMutationTimestamp");
           navigate("/login");
         }}
       >

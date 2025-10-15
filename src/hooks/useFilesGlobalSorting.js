@@ -1,6 +1,5 @@
 export function useFilesGlobalSorting(
     sortBy,
-    sortOrder,
     setSortBy,
     setSortOrder,
     goToFirstPage
@@ -11,6 +10,7 @@ export function useFilesGlobalSorting(
             setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         } else {
             setSortBy(column);
+            setSortOrder("asc");
         }
 
         // reset to first page when sorting changes

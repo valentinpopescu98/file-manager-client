@@ -19,6 +19,7 @@ export function useFilesPageSorting(
                 setSortOrder("asc");
             }
         } else {
+            // default to "asc"
             setSortBy(column);
             setSortOrder("asc");
         }

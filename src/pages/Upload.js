@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { getAuthHeader } from "../auth/jwt";
+import { useEffect, useState } from "react";
+import { getAuthHeader, getAuthToken } from "../auth/jwt";
 import axios from "axios";
 import Navbar from "../components/Navbar";
+import { logoutAndPurge } from "../auth/logout";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
@@ -9,6 +10,17 @@ const Upload = () => {
   const [files, setFiles] = useState([]);
   const [description, setDescription] = useState("");
   const [uploadStatuses, setUploadStatuses] = useState([]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      axios.get(`${API_SERVER_URL}/api/auth/validate`)
+        .catch((error) => {
+          console.log("Token invalid");
+          logoutAndPurge();
+        });
+    }
+  }, []);
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);

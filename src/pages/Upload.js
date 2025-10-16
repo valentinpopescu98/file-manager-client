@@ -1,26 +1,11 @@
-import { useEffect, useState } from "react";
-import { getAuthHeader, getAuthToken } from "../auth/jwt";
-import axios from "axios";
+import api from "../lib/api";
+import { useState } from "react";
 import Navbar from "../components/Navbar";
-import { logoutAndPurge } from "../auth/logout";
-
-const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Upload = () => {
   const [files, setFiles] = useState([]);
   const [description, setDescription] = useState("");
   const [uploadStatuses, setUploadStatuses] = useState([]);
-
-  useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      axios.get(`${API_SERVER_URL}/api/auth/validate`)
-        .catch((error) => {
-          console.log("Token invalid");
-          logoutAndPurge();
-        });
-    }
-  }, []);
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -47,13 +32,7 @@ const Upload = () => {
       formData.append("description", description);
 
       try {
-        const response = await axios.post(`${API_SERVER_URL}/api/upload`, formData, {
-          headers: {
-            ...getAuthHeader(),
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
+        const response = await api.post('/api/upload', formData);
         const uploadId = response.data;
         checkUploadStatus(uploadId, file.name);
       } catch (err) {
@@ -75,9 +54,7 @@ const Upload = () => {
     let finished = false;
     while (!finished) {
       try {
-        const res = await axios.get(`${API_SERVER_URL}/api/upload/status?uploadId=${uploadId}`, {
-          headers: getAuthHeader(),
-        });
+        const res = await api.get(`/api/upload/status?uploadId=${uploadId}`);
 
         const { status } = res.data;
         if (status === "DONE") {

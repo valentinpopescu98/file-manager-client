@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { isoToDate } from "../utils/date";
-import { getAuthHeader } from "../auth/jwt";
 import useFilesFilter from "../hooks/useFilesFilter";
 import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
 import useFilesPageSorting from "../hooks/useFilesPageSorting";
@@ -16,7 +15,6 @@ import PageLimit from "../components/PageLimit";
 import PaginationControls from "../components/PaginationControls";
 import { logoutAndPurge } from "../auth/logout";
 
-const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
 const CACHE_MAX_SIZE = 20;
 const LAST_MUTATION_KEY = "lastMutationTimestamp";
@@ -128,8 +126,7 @@ const Files = () => {
     }
 
     try {
-      const response = await axios.get(`${API_SERVER_URL}/api`, {
-        headers: getAuthHeader(),
+      const response = await api.get('/api', {
         params: {
           page,
           limit,
@@ -241,10 +238,7 @@ const Files = () => {
   useEffect(() => {
     const checkForInvalidation = async () => {
       try {
-        const response = await axios.get(`${API_SERVER_URL}/api/log/files/actions/last-mutation`, {
-          headers: getAuthHeader()
-        });
-
+        const response = await api.get('/api/log/files/actions/last-mutation');
         const serverTimestamp = new Date(response.data).toISOString();
         const localTimestamp = localStorage.getItem(LAST_MUTATION_KEY);
 
@@ -291,8 +285,7 @@ const Files = () => {
 
   const handleDownload = async (s3Key) => {
     try {
-      const response = await axios.get(`${API_SERVER_URL}/api/download?s3Key=${encodeURIComponent(s3Key)}`, {
-        headers: getAuthHeader(),
+      const response = await api.get(`/api/download?s3Key=${encodeURIComponent(s3Key)}`, {
         responseType: "blob",
       });
 
@@ -329,9 +322,7 @@ const Files = () => {
 
     // try to delete from the server
     try {
-      await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
-        headers: getAuthHeader(),
-      });
+      await api.delete(`/api/delete?s3Key=${s3Key}`);
 
       // mark as invalidated
       // files count updated -> remove current key from cache -> next fetchPage will call backend

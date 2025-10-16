@@ -1,9 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { setAuthToken } from "../auth/jwt";
-
-const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,7 +13,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API_SERVER_URL}/api/auth/login`, {
+      const response = await api.post('/api/auth/login', {
         email,
         password,
       });
@@ -28,7 +26,7 @@ const Login = () => {
   };
 
   const handleGoogleLogin = async (e) => {
-    window.location.href = `${API_SERVER_URL}/oauth2/authorization/google`;
+    window.location.href = `${process.env.REACT_APP_API_SERVER_URL}/oauth2/authorization/google`;
   }
 
   return (

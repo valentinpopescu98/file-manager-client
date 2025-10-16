@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { isoToDate } from "../utils/date";
+import { getAuthHeader } from "../auth/jwt";
 import useFilesFilter from "../hooks/useFilesFilter";
 import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
 import useFilesPageSorting from "../hooks/useFilesPageSorting";
@@ -109,10 +110,6 @@ const Files = () => {
     filterUploadedAtAfter
   ]);
 
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem("token")}`
-  });
-
   const invalidateCache = () => {
     cache.current.clear();
     localStorage.removeItem(CACHE_KEY);
@@ -133,7 +130,7 @@ const Files = () => {
 
     try {
       const response = await axios.get(`${API_SERVER_URL}/api`, {
-        headers: getAuthHeaders(),
+        headers: getAuthHeader(),
         params: {
           page,
           limit,
@@ -247,7 +244,7 @@ const Files = () => {
     const checkForInvalidation = async () => {
       try {
         const response = await axios.get(`${API_SERVER_URL}/api/log/files/actions/last-mutation`, {
-          headers: getAuthHeaders()
+          headers: getAuthHeader()
         });
 
         const serverTimestamp = new Date(response.data).toISOString();
@@ -306,7 +303,7 @@ const Files = () => {
   const handleDownload = async (s3Key) => {
     try {
       const response = await axios.get(`${API_SERVER_URL}/api/download?s3Key=${encodeURIComponent(s3Key)}`, {
-        headers: getAuthHeaders(),
+        headers: getAuthHeader(),
         responseType: "blob",
       });
 
@@ -344,7 +341,7 @@ const Files = () => {
     // try to delete from the server
     try {
       await axios.delete(`${API_SERVER_URL}/api/delete?s3Key=${s3Key}`, {
-        headers: getAuthHeaders(),
+        headers: getAuthHeader(),
       });
 
       // mark as invalidated

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { setAuthToken } from "../auth/jwt";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 
@@ -18,7 +19,7 @@ const Login = () => {
         email,
         password,
       });
-      localStorage.setItem("token", response.data.token);
+      setAuthToken(response.data.token)
       navigate("/");
     } catch (error) {
       setError("Invalid credentials");

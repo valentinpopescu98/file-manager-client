@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { getAuthToken } from "../auth/jwt";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const token = getAuthToken();
 
   if (!token) return null;
 

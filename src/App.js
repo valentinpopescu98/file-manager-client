@@ -4,9 +4,10 @@ import Login from './pages/Login';
 import Register from "./pages/Register";
 import OAuth2Success from "./pages/OAuth2Success";
 import Upload from './pages/Upload';
+import { getAuthToken } from "./auth/jwt";
 
 const PrivateRoute = ({ element: Element }) => {
-  const token = localStorage.getItem("token");
+  const token = getAuthToken();
   return token ? Element : <Navigate to="/login" />;
 };
 

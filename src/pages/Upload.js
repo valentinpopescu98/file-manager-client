@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAuthHeader } from "../auth/jwt";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 
@@ -36,7 +37,7 @@ const Upload = () => {
       try {
         const response = await axios.post(`${API_SERVER_URL}/api/upload`, formData, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            ...getAuthHeader(),
             "Content-Type": "multipart/form-data",
           },
         });
@@ -63,7 +64,7 @@ const Upload = () => {
     while (!finished) {
       try {
         const res = await axios.get(`${API_SERVER_URL}/api/upload/status?uploadId=${uploadId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: getAuthHeader(),
         });
 
         const { status } = res.data;

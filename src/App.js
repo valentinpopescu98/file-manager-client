@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { logoutAndPurge } from "./auth/logout";
+import api from "./lib/api";
 import Files from './pages/Files';
 import Login from './pages/Login';
 import Register from "./pages/Register";
@@ -15,6 +16,14 @@ const PrivateRoute = ({ element: Element }) => {
 
 function App() {
   useEffect(() => {
+    // Validate one time when starting application
+    const token = getAuthToken();
+    if (token) {
+      api.get("/api/auth/validate").catch(() => {
+        // NO-OP: api interceptor will do logoutAndPurge()
+      });
+    }
+
     // Detect logout message and then log out
     try {
       const bc = new BroadcastChannel("auth");

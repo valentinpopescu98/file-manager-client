@@ -1,11 +1,21 @@
 import api from "../lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
+import { getAuthToken } from "../auth/jwt";
 
 const Upload = () => {
   const [files, setFiles] = useState([]);
   const [description, setDescription] = useState("");
   const [uploadStatuses, setUploadStatuses] = useState([]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      api.get("/api/auth/validate").catch(() => {
+        // NO-OP: api interceptor will do logoutAndPurge()
+      });
+    }
+  }, []);
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);

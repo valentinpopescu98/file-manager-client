@@ -1,5 +1,6 @@
 export function useFilesGlobalSorting(
     sortBy,
+    sortOrder,
     setSortBy,
     setSortOrder,
     goToFirstPage

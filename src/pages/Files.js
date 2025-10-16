@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { isoToDate } from "../utils/date";
 import { getAuthHeader } from "../auth/jwt";
@@ -15,6 +14,7 @@ import FileMetadata from "../components/FileMetadata";
 import FilteringControls from "../components/FilteringControls";
 import PageLimit from "../components/PageLimit";
 import PaginationControls from "../components/PaginationControls";
+import { logoutAndPurge } from "../auth/logout";
 
 const API_SERVER_URL = process.env.REACT_APP_API_SERVER_URL;
 const CACHE_KEY = "pageCache";
@@ -23,7 +23,6 @@ const LAST_MUTATION_KEY = "lastMutationTimestamp";
 const CACHE_UPDATE_INTERVAL = 60 * 60 * 1000;
 
 const Files = () => {
-  const navigate = useNavigate();
   const cache = useRef(new Map());
 
   const [files, setFiles] = useState([]);
@@ -167,13 +166,12 @@ const Files = () => {
     } catch (error) {
       console.error("Files fetch failed", error);
       if (error.response?.status === 401) {
-        navigate("/login");
+        logoutAndPurge();
       }
     } finally {
       setLoading(false);
     }
   }, [
-    navigate,
     getPageKey,
     page,
     limit,
@@ -262,6 +260,9 @@ const Files = () => {
         }
       } catch (err) {
         console.error("Could not check for last mutation", err);
+        if (err.response?.status === 401) {
+          logoutAndPurge();
+        }
       }
     };
 
@@ -286,19 +287,7 @@ const Files = () => {
   // Handle fetch files
   useEffect(() => {
     fetchPage();
-  }, [
-    navigate,
-    fetchPage, 
-    page, 
-    limit, 
-    globalSortBy, 
-    globalSortOrder, 
-    filterName, 
-    filterDescription, 
-    filterUploaderEmail, 
-    filterUploadedAtBefore, 
-    filterUploadedAtAfter
-  ]);
+  }, [fetchPage]);
 
   const handleDownload = async (s3Key) => {
     try {

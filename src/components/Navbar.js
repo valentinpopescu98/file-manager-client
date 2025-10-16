@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { logoutAndPurge } from "../auth/logout";
 import { getAuthToken } from "../auth/jwt";
 
 const Navbar = () => {
@@ -13,12 +14,7 @@ const Navbar = () => {
       <button onClick={() => navigate("/")}>Files</button>
       <button onClick={() => navigate("/upload")}>Upload</button>
       <button
-        onClick={() => {
-          localStorage.removeItem("token");
-          localStorage.removeItem("pageCache");
-          localStorage.removeItem("lastMutationTimestamp");
-          navigate("/login");
-        }}
+        onClick={() => logoutAndPurge("user-logout")}
       >
         Logout
       </button>

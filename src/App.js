@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { logoutAndPurge } from "./auth/logout";
 import Files from './pages/Files';
 import Login from './pages/Login';
 import Register from "./pages/Register";
@@ -12,6 +14,26 @@ const PrivateRoute = ({ element: Element }) => {
 };
 
 function App() {
+  useEffect(() => {
+    // Detect logout message and then log out
+    try {
+      const bc = new BroadcastChannel("auth");
+      bc.onmessage = (ev) => {
+        if (ev.data?.type === "logout") logoutAndPurge(ev.data.reason);
+      };
+
+      return () => bc.close();
+    } catch {
+      // Fallback on the storage event
+      const onStorage = (e) => {
+        if (e.key === "logout-event") logoutAndPurge("broadcast");
+      };
+
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
+    }
+  }, []);
+
   return (
     <Router>
       <Routes>

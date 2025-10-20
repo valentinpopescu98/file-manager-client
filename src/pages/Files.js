@@ -340,6 +340,7 @@ const Files = () => {
 
   return (
     <div>
+      <title>Files</title>
       <Navbar />
       <h2>Files</h2>
       

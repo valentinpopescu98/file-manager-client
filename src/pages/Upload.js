@@ -93,6 +93,7 @@ const Upload = () => {
 
   return (
     <div>
+      <title>Upload</title>
       <Navbar />
       <h2>Upload Files</h2>
       <form onSubmit={handleUpload}>

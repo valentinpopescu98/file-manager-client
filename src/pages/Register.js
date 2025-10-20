@@ -42,6 +42,7 @@ const Register = () => {
 
   return (
     <div>
+      <title>Create an account</title>
       <h2>Register</h2>
       {error && <p style={{ color: "red" }}>{error}</p>}
       {success && <p style={{ color: "green" }}>{success}</p>}

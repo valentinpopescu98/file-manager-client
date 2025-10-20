@@ -14,7 +14,12 @@ const OAuth2Success = () => {
     }
   }, [navigate]);
 
-  return <div>Logging in...</div>;
+  return (
+    <div>
+      <title>Login Successful</title>
+      <div>Logging in...</div>
+    </div>
+  );
 };
 
 export default OAuth2Success;

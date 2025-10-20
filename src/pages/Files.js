@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import api from "../lib/api";
+import { api } from "../lib/api";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import { isoToDate } from "../utils/date";
 import useFilesFilter from "../hooks/useFilesFilter";

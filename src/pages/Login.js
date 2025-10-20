@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../lib/api";
+import { authApi } from "../lib/api";
 import { useNavigate, Link } from "react-router-dom";
 import { setAuthToken } from "../auth/jwt";
 
@@ -13,11 +13,11 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.post('/api/auth/login', {
+      const response = await authApi.post('/api/auth/login', {
         email,
         password,
       });
-      setAuthToken(response.data.token)
+      setAuthToken(response.data.token);
       navigate("/");
     } catch (error) {
       setError("Invalid credentials");

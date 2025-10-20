@@ -1,15 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Files from './pages/Files';
 import Login from './pages/Login';
 import Register from "./pages/Register";
 import OAuth2Success from "./pages/OAuth2Success";
 import Upload from './pages/Upload';
-import { useAuthBootstrap } from "./lib/api";
-
-const PrivateRoute = () => {
-  useAuthBootstrap();
-  return <Outlet />;
-};
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (

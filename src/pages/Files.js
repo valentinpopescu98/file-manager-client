@@ -341,7 +341,6 @@ const Files = () => {
   return (
     <div>
       <title>Files</title>
-      <Navbar />
       <h2>Files</h2>
       
       <FilteringControls filters={{draftFilterName, draftFilterDescription, draftFilterUploaderEmail, draftFilterUploadedAtBefore, draftFilterUploadedAtAfter}}

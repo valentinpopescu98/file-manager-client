@@ -2,8 +2,7 @@ export function useFilesGlobalSorting(
     sortBy,
     sortOrder,
     setSortBy,
-    setSortOrder,
-    goToFirstPage
+    setSortOrder
 ) {
     // sort for all files (in DB)
     const globalToggleSort = (column) => {
@@ -12,9 +11,6 @@ export function useFilesGlobalSorting(
         } else {
             setSortBy(column);
         }
-
-        // reset to first page when sorting changes
-        goToFirstPage();
     };
 
     return { globalToggleSort };

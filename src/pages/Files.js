@@ -68,8 +68,7 @@ const Files = () => {
     globalSortBy,
     globalSortOrder,
     setGlobalSortBy,
-    setGlobalSortOrder,
-    () => setPage(1)
+    setGlobalSortOrder
   );
 
   const { handleLimitChange } = usePageLimit(
@@ -290,7 +289,8 @@ const Files = () => {
 
   const handleDownload = async (s3Key) => {
     try {
-      const response = await api.get(`/api/download?s3Key=${encodeURIComponent(s3Key)}`, {
+      const encoded = encodeURIComponent(s3Key);
+      const response = await api.get(`/api/download?s3Key=${encoded}`, {
         responseType: "blob",
       });
 
@@ -327,7 +327,8 @@ const Files = () => {
 
     // try to delete from the server
     try {
-      await api.delete(`/api/delete?s3Key=${s3Key}`);
+      const encoded = encodeURIComponent(s3Key);
+      await api.delete(`/api/delete?s3Key=${encoded}`);
 
       // mark as invalidated
       // files count updated -> remove current key from cache -> next fetchPage will call backend

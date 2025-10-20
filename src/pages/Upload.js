@@ -1,6 +1,5 @@
 import { api } from "../lib/api";
 import { useState } from "react";
-import Navbar from "../components/Navbar";
 
 const Upload = () => {
   const [files, setFiles] = useState([]);

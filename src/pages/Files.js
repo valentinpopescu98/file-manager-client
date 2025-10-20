@@ -7,7 +7,6 @@ import useFilesGlobalSorting from "../hooks/useFilesGlobalSorting";
 import useFilesPageSorting from "../hooks/useFilesPageSorting";
 import usePageLimit from "../hooks/usePageLimit";
 import usePagination from "../hooks/usePagination";
-import Navbar from "../components/Navbar";
 import GlobalSortingControls from "../components/GlobalSortingControls";
 import FileMetadata from "../components/FileMetadata";
 import FilteringControls from "../components/FilteringControls";
@@ -182,6 +181,11 @@ const Files = () => {
     filterUploadedAtAfter
   ]);
 
+  // Set page name
+  useEffect(() => {
+    document.title = `Files | Page ${page}`;
+  }, [page]);
+
   // Load up from local storage
   useEffect(() => {
     // load cache
@@ -340,7 +344,6 @@ const Files = () => {
 
   return (
     <div>
-      <title>Files</title>
       <h2>Files</h2>
       
       <FilteringControls filters={{draftFilterName, draftFilterDescription, draftFilterUploaderEmail, draftFilterUploadedAtBefore, draftFilterUploadedAtAfter}}

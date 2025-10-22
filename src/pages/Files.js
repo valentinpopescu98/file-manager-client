@@ -46,6 +46,7 @@ const Files = () => {
   const filterUploadedAtAfter = useDebouncedValue(draftFilterUploadedAtAfter);
 
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   const { handleFilterChange, clearFilters } = useFilesFilter({
       setDraftFilterName,
@@ -113,6 +114,11 @@ const Files = () => {
 
   // File fetch logic
   const fetchPage = useCallback(async () => {
+    if (deleting) {
+      console.log("Skipping fetch - delete in progress");
+      return;
+    }
+
     setLoading(true);
     const pageKey = getPageKey();
     
@@ -169,6 +175,7 @@ const Files = () => {
     }
   }, [
     getPageKey,
+    deleting,
     page,
     limit,
     globalSortBy,
@@ -320,26 +327,30 @@ const Files = () => {
   };
 
   const handleDelete = async (s3Key) => {
+    setDeleting(true);
+
     // remove from UI immediately
     const removedFile = files.find(file => file.s3Key === s3Key);
     setFiles(prev => prev.filter(file => file.s3Key !== s3Key));
     setFilesCount(prev => prev - 1);
 
+    // mark as invalidated
+    // files count updated -> remove current key from cache -> next fetchPage will call backend
+    invalidateCache();
+    localStorage.setItem("filesInvalidated", "true");
+
     // try to delete from the server
     try {
       const encoded = encodeURIComponent(s3Key);
       await api.delete(`/api/delete?s3Key=${encoded}`);
-
-      // mark as invalidated
-      // files count updated -> remove current key from cache -> next fetchPage will call backend
-      localStorage.setItem("filesInvalidated", "true");
-      invalidateCache();
     } catch (error) {
       // if failed, add the file back and notify
       setFiles(prev => [removedFile, ...prev]);
       setFilesCount(prev => prev + 1);
       console.error("Deletion failed:", error);
       alert("Deletion failed! Try again...");
+    } finally {
+      setDeleting(false);
     }
   };
 

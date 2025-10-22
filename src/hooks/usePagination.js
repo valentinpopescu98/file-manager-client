@@ -7,24 +7,20 @@ export function usePagination(page, filesCount, limit) {
         pages.push(1);
 
         // if there are more than 2 pages between page 1 and current page, write …
-        if (page - delta > 2) {
-        pages.push("left-ellipsis");
-        }
+        if (page - delta > 2)
+            pages.push("left-ellipsis");
 
         // pages around current page
-        for (let p = Math.max(2, page - delta); p <= Math.min(lastPage - 1, page + delta); p++) {
-        pages.push(p);
-        }
+        for (let p = Math.max(2, page - delta); p <= Math.min(lastPage - 1, page + delta); p++)
+            pages.push(p);
 
         // if there are more than 2 pages between current page and last page, write …
-        if (page + delta < lastPage - 1) {
-        pages.push("right-ellipsis");
-        }
+        if (page + delta < lastPage - 1)
+            pages.push("right-ellipsis");
 
         // last page (if bigger than 1)
-        if (lastPage > 1) {
-        pages.push(lastPage);
-        }
+        if (lastPage > 1)
+            pages.push(lastPage);
 
         return pages;
     }

@@ -8,9 +8,9 @@ services:
     container_name: file-manager-client-container
     restart: always
     volumes:
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "80:80"
       - "443:443"
@@ -19,17 +19,21 @@ services:
 
   certbot:
     image: certbot/certbot
-    container_name: certbot
+    container_name: certbot-container
+    restart: always
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-    entrypoint: >
-      sh -c "[[ -f /etc/letsencrypt/live/filemanager.valentinpopescu.com/fullchain.pem ]] ||
-      certbot certonly --webroot -w /var/www/certbot
-      --email valentin@valentinpopescu.com --agree-tos --no-eff-email
-      -d filemanager.valentinpopescu.com && exit 0"
+      - ./certbot-entrypoint.sh:/certbot-entrypoint.sh:ro
+    entrypoint: sh /certbot-entrypoint.sh
+    environment:
+      - DOMAIN=filemanager.valentinpopescu.com
+      - EMAIL=contact@valentinpopescu.com
+      - CHECK_INTERVAL=86400
     networks:
       - file-manager-network
+    depends_on:
+      - client
 
 networks:
   file-manager-network:

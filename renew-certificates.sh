@@ -5,42 +5,52 @@ DOMAIN="filemanager.valentinpopescu.com"
 CERT_PATH="./certbot/conf/live/${DOMAIN}/fullchain.pem"
 APP_NAME="file-manager-client"
 CONTAINER_NAME="${APP_NAME}-container"
-RENEW_DAYS_THRESHOLD=30
+CERTBOT_CONTAINER="certbot-container"
 
-function get_cert_days_left() {
-  if ! sudo test -f "$CERT_PATH"; then
-    echo 0
-    return
-  fi
+echo "=== Manual Certificate Renewal ==="
 
-  end_date=$(sudo openssl x509 -enddate -noout -in "$CERT_PATH" | cut -d= -f2)
+# Check if certificate exists and get days left
+if [ ! -f "$CERT_PATH" ]; then
+  echo "No certificate found at $CERT_PATH"
+  echo "Obtaining new certificate..."
+  
+  docker exec $CERTBOT_CONTAINER certbot certonly --webroot -w /var/www/certbot \
+    -d "$DOMAIN" \
+    --email valentin@valentinpopescu.com \
+    --agree-tos \
+    --no-eff-email \
+    --non-interactive
+else
+  end_date=$(openssl x509 -enddate -noout -in "$CERT_PATH" | cut -d= -f2)
   end_date_seconds=$(date -d "$end_date" +%s)
   now_seconds=$(date +%s)
-  echo $(( (end_date_seconds - now_seconds) / 86400 ))
-}
-
-# Check if certificate needs renewal
-DAYS_LEFT=$(get_cert_days_left)
-echo "Certificate valid for $DAYS_LEFT more days."
-
-if [ "$DAYS_LEFT" -lt "$RENEW_DAYS_THRESHOLD" ]; then
-  echo "Renewing certificate..."
-  docker-compose run --rm certbot renew --webroot -w /var/www/certbot
-  echo "Renew finished."
-else
-  echo "Certificate is still valid. No need to renew."
-fi
-
-# Reload nginx if container runs and certificates are present
-if sudo test -f "$CERT_PATH"; then
-  CLIENT_CONTAINER=$(docker ps -qf "name=$CONTAINER_NAME")
-  if [ -n "$CLIENT_CONTAINER" ]; then
-    echo "Reloading Nginx in $CONTAINER_NAME with renewed cert..."
-    docker exec $CLIENT_CONTAINER nginx -s reload
-    echo "Reloaded Nginx with new certificate."
+  days_left=$(( (end_date_seconds - now_seconds) / 86400 ))
+  
+  echo "Current certificate valid for $days_left days."
+  
+  if [ "$days_left" -lt 0 ]; then
+    echo "Certificate EXPIRED. Force renewing..."
+    docker exec $CERTBOT_CONTAINER certbot certonly --webroot -w /var/www/certbot \
+      -d "$DOMAIN" \
+      --email valentin@valentinpopescu.com \
+      --agree-tos \
+      --no-eff-email \
+      --non-interactive \
+      --force-renewal
   else
-    echo "Client container not running; skipping nginx reload."
+    echo "Renewing certificate..."
+    docker exec $CERTBOT_CONTAINER certbot renew --webroot -w /var/www/certbot
   fi
-else
-  echo "No certificate found after renew attempt."
 fi
+
+# Reload nginx if container is running
+if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+  echo "Reloading nginx..."
+  docker exec "$CONTAINER_NAME" nginx -s reload
+  echo "Nginx reloaded successfully."
+else
+  echo "Warning: Client container not running. Nginx not reloaded."
+fi
+
+echo ""
+echo "Certificate renewal complete!"

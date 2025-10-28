@@ -1,6 +1,22 @@
-node_modules
-Dockerfile
-.dockerignore
+# Exclude certbot certificates from Docker build context
+certbot/
+
+# Exclude node_modules if already installed and logs
+node_modules/
 npm-debug.log
-.git
+
+# Exclude git files
+.git/
 .gitignore
+
+# Exclude build scripts
+*.sh
+
+# Exclude docker files
+.dockerignore
+docker-compose.yml
+Dockerfile
+
+# Exclude documentation
+README.md
+*.md

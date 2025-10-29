@@ -112,6 +112,21 @@ const Files = () => {
     localStorage.removeItem(CACHE_KEY);
   }
 
+  // Set page name
+  useEffect(() => {
+    document.title = `Files | Page ${page}`;
+  }, [page]);
+
+  // When removing all elements from page, move to previous page
+  useEffect(() => {
+    if (filesCount !== null) {
+      const maxPage = Math.max(1, Math.ceil(filesCount / limit));
+      if (page > maxPage) {
+        setPage(maxPage);
+      }
+    }
+  }, [filesCount, page, limit]);
+
   // File fetch logic
   const fetchPage = useCallback(async () => {
     if (deleting) {
@@ -186,11 +201,6 @@ const Files = () => {
     filterUploadedAtBefore,
     filterUploadedAtAfter
   ]);
-
-  // Set page name
-  useEffect(() => {
-    document.title = `Files | Page ${page}`;
-  }, [page]);
 
   // Load up from local storage
   useEffect(() => {
@@ -278,16 +288,6 @@ const Files = () => {
     const interval = setInterval(checkForInvalidation, CACHE_UPDATE_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchPage]);
-
-  // When removing all elements from page, move to previous page
-  useEffect(() => {
-    if (filesCount !== null) {
-      const maxPage = Math.max(1, Math.ceil(filesCount / limit));
-      if (page > maxPage) {
-        setPage(maxPage);
-      }
-    }
-  }, [filesCount, page, limit]);
 
   // Handle fetch files
   useEffect(() => {

@@ -2,6 +2,8 @@
 
 React frontend for a cloud file manager deployed on AWS EC2, served via Nginx with HTTPS (Let's Encrypt). Connects to [file-manager-server](https://github.com/valentinpopescu98/file-manager-server) Spring Boot backend.
 
+**Companion project:** [file-manager-server](https://github.com/valentinpopescu98/file-manager-server) — Sprint Boot backend
+
 ---
 
 ## Features
